@@ -29,6 +29,9 @@ sudo apt install i3
 sudo apt-get install autorandr
 autorandr --default laptop
 
+# flameshot
+sudo apt install flameshot
+
 # Sym links
 ln -s ~/.dotfiles/.bashrc ~/.bashrc
 ln -s ~/.dotfiles/.zshrc ~/.zshrc
