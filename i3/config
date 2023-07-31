@@ -184,3 +184,9 @@ bindsym $mod+r mode "resize"
 bar {
         status_command i3status
 }
+
+# Suspend
+bindsym $mod+Shift+period exec systemctl suspend
+
+# Browser
+bindsym $mod+Shift+b exec --no-startup-id google-chrome-stable

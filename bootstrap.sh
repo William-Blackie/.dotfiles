@@ -25,9 +25,13 @@ sudo apt install tmux
 # i3
 sudo apt install i3
 
+# autorandr
+sudo apt-get install autorandr
+autorandr --default laptop
+
 # Sym links
 ln -s ~/.dotfiles/.bashrc ~/.bashrc
-ln -s .dotfiles/.zshrc ~/.zshrc
+ln -s ~/.dotfiles/.zshrc ~/.zshrc
 ln -s ~/.dotfiles/.gitconfig ~/.gitconfig
 ln -s ~/.dotfiles/i3/config ~/.config/i3/config
-
+ln -s ~/.dotfiles/autorandr  ~/.config/autorandrd
