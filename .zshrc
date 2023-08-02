@@ -134,6 +134,11 @@ alias hpd="bluetoothctl disconnect $BOSE"
 alias kbc="bluetoothctl connect $KEYBOARD"
 alias kbd="bluetoothctl disconnect $KEYBOARD"
 
+
+# xrandr
+alias screen-off="xrandr --output eDP --off"
+alias screen-on="xrandr --output eDP --auto"
+
 # Set Keyboard layout
 setxkbmap -layout gb
 
