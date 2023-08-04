@@ -45,6 +45,9 @@ sudo apt-get update
 # If you want a specific version, use 'postgresql-12' or similar instead of 'postgresql':
 sudo apt-get -y install postgresql
 
+# DSLR (DB snapshot tool)
+pip install DSLR  psycopg2-binary
+
 # Sym links
 ln -s ~/.dotfiles/.bashrc ~/.bashrc
 ln -s ~/.dotfiles/.zshrc ~/.zshrc
