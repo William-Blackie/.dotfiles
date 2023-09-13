@@ -141,6 +141,20 @@ alias screen-on="xrandr --output eDP --auto"
 
 # Set Keyboard layout
 setxkbmap -layout gb
+xset -dpms s off
+
+alias start="~/.dotfiles/scripts/launch-tmux.sh"
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+hrvst_yargs_completions()
+{
+  local reply
+  local si=$IFS
+  IFS=$'
+' reply=($(COMP_CWORD="$((CURRENT-1))" COMP_LINE="$BUFFER" COMP_POINT="$CURSOR" hrvst --get-yargs-completions "${words[@]}"))
+  IFS=$si
+  _describe 'values' reply
+}
+compdef _hrvst_yargs_completions hrvst

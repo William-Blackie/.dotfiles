@@ -48,6 +48,10 @@ sudo apt-get -y install postgresql
 # DSLR (DB snapshot tool)
 pip install DSLR  psycopg2-binary
 
+# Atuin
+bash <(curl https://raw.githubusercontent.com/atuinsh/atuin/main/install.sh)
+
+
 # Sym links
 ln -s ~/.dotfiles/.bashrc ~/.bashrc
 ln -s ~/.dotfiles/.zshrc ~/.zshrc
