@@ -126,6 +126,7 @@ export PATH="$FLYCTL_INSTALL/bin:$PATH"
 # Bluetooth
 export BOSE="C8:7B:23:08:40:93"
 export KEYBOARD="F4:73:35:69:A6:63"
+export AIRPODS="1C:B3:C9:D0:CA:11"
 
 # Some aliases for connecting/disconnecting
 alias hpc="bluetoothctl connect $BOSE"
@@ -134,6 +135,8 @@ alias hpd="bluetoothctl disconnect $BOSE"
 alias kbc="bluetoothctl connect $KEYBOARD"
 alias kbd="bluetoothctl disconnect $KEYBOARD"
 
+alias apc="bluetoothctl connect $AIRPODS"
+alias apd="bluetoothctl connect $AIRPODS"
 
 # xrandr
 alias screen-off="xrandr --output eDP --off"
@@ -143,7 +146,28 @@ alias screen-on="xrandr --output eDP --auto"
 setxkbmap -layout gb
 xset -dpms s off
 
+# Tmux
 alias start="~/.dotfiles/scripts/launch-tmux.sh"
+
+# Git
+alias g="git"
+alias gs="git status"
+alias ga="git add"
+alias gc="git commit"
+alias gca="git commit -a"
+alias gcm="git commit -m"
+alias gco="git checkout"
+alias gcb="git checkout -b"
+alias gbd="git branch -d"
+alias gbr="git branch"
+alias gpl="git pull"
+alias gph="git push"
+alias gsh="git stash"
+alias gshp="git stash pop"
+alias gshl="git stash list"
+
+# Shutdown
+alias sdn="sudo shutdown -h now"
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh

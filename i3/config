@@ -188,8 +188,11 @@ bar {
 # Suspend
 bindsym $mod+Shift+period exec systemctl suspend
 
-# Browser
-bindsym $mod+Shift+b exec --no-startup-id google-chrome-stable
+# Lock
+bindsym $mod+Shift+? exec --no-startup-id i3lock
+
+# Bluetooth
+bindsym $mod+Shift+b exec --no-startup-id blueman-manager
 
 # Flameshot
 bindsym $mod+Shift+s exec --no-startup-id flameshot gui
