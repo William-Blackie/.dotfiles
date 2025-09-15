@@ -1,0 +1,71 @@
+[user]
+	email = will@developerfy.com
+	name = William Blackie
+
+[init]
+	defaultBranch = main
+
+[push]
+	autoSetupRemote = true
+	default = current
+
+[pull]
+	rebase = false
+
+[core]
+	editor = nvim
+	autocrlf = input
+	excludesfile = ~/.gitignore_global
+
+[alias]
+	# Short commands
+	st = status
+	co = checkout
+	br = branch
+	cm = commit
+	lg = log --oneline --graph --decorate --all
+	
+	# Useful aliases
+	unstage = reset HEAD --
+	last = log -1 HEAD
+	visual = !gitk
+	
+	# Show files ignored by git
+	ignored = ls-files --others --ignored --exclude-standard
+	
+	# Pretty log
+	hist = log --pretty=format:'%h %ad | %s%d [%an]' --graph --date=short
+	
+	# Show diff of last commit
+	dlc = diff --cached HEAD^
+	
+	# Undo last commit
+	undo = reset --soft HEAD^
+
+[color]
+	ui = auto
+	branch = auto
+	diff = auto
+	status = auto
+
+[color "branch"]
+	current = yellow reverse
+	local = yellow
+	remote = green
+
+[color "diff"]
+	meta = yellow bold
+	frag = magenta bold
+	old = red bold
+	new = green bold
+
+[color "status"]
+	added = yellow
+	changed = green
+	untracked = cyan
+
+[diff]
+	tool = vimdiff
+
+[merge]
+	tool = vimdiff

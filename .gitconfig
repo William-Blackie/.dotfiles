@@ -1,8 +1,0 @@
-[user]
-	email = # Email
-	name = William Blackie
-[init]
-	defaultBranch = main
-[push]
-	autoSetupRemote = true
-	default = current
