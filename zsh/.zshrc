@@ -113,3 +113,8 @@ export VISUAL="nvim"
 ##### Better defaults for tools
 export BAT_THEME="Catppuccin-mocha"
 export EZA_COLORS="uu=36:gu=37:sn=32:sb=32:da=34:ur=34:uw=35:ux=36:ue=36:gr=34:gw=35:gx=36:tr=34:tw=35:tx=36:"
+. "$HOME/.local/bin/env"
+export PYTHONWARNINGS="ignore::django.utils.deprecation.RemovedInDjango50Warning"
+
+# Added by Cartesia CLI installer
+export PATH="/Users/william/.cartesia/bin:$PATH"

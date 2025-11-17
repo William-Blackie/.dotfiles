@@ -16,6 +16,7 @@
 	editor = nvim
 	autocrlf = input
 	excludesfile = ~/.gitignore_global
+	ignorecase = true
 
 [alias]
 	# Short commands
