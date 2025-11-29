@@ -69,3 +69,9 @@ symbol = " "
 format = "[](surface0)[$symbol$context]($style)[](surface0) "
 style = "fg:blue bg:surface0"
 detect_files = ["docker-compose.yml", "docker-compose.yaml", "Dockerfile"]
+
+[aws]
+disabled = true
+
+[gcloud]
+disabled = true

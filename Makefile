@@ -48,7 +48,25 @@ install-packages:
 	@echo "✅ All packages installed!"
 
 install:
-	stow zsh tmux kitty starship nvim git fzf shell
+	@echo "📦 Stowing dotfiles (backing up conflicts)..."
+	@BACKUP_DIR="$${HOME}/.dotfiles_backup_$$(date +%Y%m%d_%H%M%S)"; \
+	PACKAGES="zsh tmux kitty starship nvim git fzf shell"; \
+	mkdir -p "$$BACKUP_DIR"; \
+	for pkg in $$PACKAGES; do \
+		echo "→ Processing $$pkg"; \
+		stow -n $$pkg 2>&1 | grep "existing target" | sed 's/.*existing target \(.*\) since.*/\1/' | while read -r target; do \
+			[ -z "$$target" ] && continue; \
+			target_path="$${HOME}/$$target"; \
+			if [ -e "$$target_path" ] && [ ! -L "$$target_path" ]; then \
+				backup_path="$$BACKUP_DIR/$$target"; \
+				mkdir -p "$$(dirname "$$backup_path")"; \
+				echo "  ⚠️  Backing up $$target"; \
+				mv "$$target_path" "$$backup_path"; \
+			fi; \
+		done; \
+		stow $$pkg; \
+	done
+	@echo "✅ Stow complete. Backups in $$BACKUP_DIR"
 
 uninstall:
 	stow -D zsh tmux kitty starship nvim git fzf shell
