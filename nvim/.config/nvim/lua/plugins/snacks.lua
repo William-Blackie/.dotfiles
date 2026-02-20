@@ -1,4 +1,3 @@
--- Snacks.nvim configuration - show hidden files and build dir
 return {
   "folke/snacks.nvim",
   opts = {
@@ -14,11 +13,9 @@ return {
         },
         files = {
           hidden = true,
-          ignored = true,
         },
         grep = {
           hidden = true,
-          ignored = true,
         },
       },
     },

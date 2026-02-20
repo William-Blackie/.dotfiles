@@ -1,5 +1,5 @@
-# Catppuccin Mocha palette
 palette = "catppuccin_mocha"
+
 [palettes.catppuccin_mocha]
 rosewater = "#F5E0DC"
 flamingo  = "#F2CDCD"
@@ -20,7 +20,6 @@ subtext1  = "#BAC2DE"
 surface0  = "#313244"
 base      = "#1E1E2E"
 
-# Prompt shape to feel like LazyVim: compact, left-clean, right-status
 format = """
 [](surface0)[$directory](bold text)[](surface0)\
 $git_branch$git_state$git_status$nodejs$python$rust$docker_context

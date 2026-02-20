@@ -1,5 +1,6 @@
 ##### Homebrew (macOS)
-if [[ -x "/opt/homebrew/bin/brew" ]]; then
+# Guard against double-init when .zprofile already ran this in a login shell
+if [[ -z "$HOMEBREW_PREFIX" && -x "/opt/homebrew/bin/brew" ]]; then
   eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
 
@@ -15,13 +16,12 @@ source "${ZINIT_HOME}/zinit.zsh"
 zinit light zsh-users/zsh-syntax-highlighting
 zinit light zsh-users/zsh-completions
 zinit light zsh-users/zsh-autosuggestions
-zinit light Aloxaf/fzf-tab
+# fzf-tab loaded after compinit below (required by its docs)
 
 # OMZ snippets (non-theme)
 zinit snippet OMZL::git.zsh
 zinit snippet OMZP::git
 zinit snippet OMZP::sudo
-zinit snippet OMZP::archlinux
 zinit snippet OMZP::aws
 zinit snippet OMZP::kubectl
 zinit snippet OMZP::kubectx
@@ -35,8 +35,10 @@ zinit light-mode for \
   zdharma-continuum/zinit-annex-rust
 
 ##### Completions
-fpath=(/Users/william/.docker/completions $fpath)
-autoload -Uz compinit && compinit -u
+fpath=($HOME/.docker/completions $fpath)
+autoload -Uz compinit && compinit
+# fzf-tab must load after compinit
+zinit light Aloxaf/fzf-tab
 
 ##### Prompt (Starship + Catppuccin)
 eval "$(starship init zsh)"
@@ -59,7 +61,6 @@ alias lg="lazygit"
 alias c="clear"
 alias start="tmux attach-session -t main || tmux new-session -d -s main"
 
-# Git shortcuts
 alias g="git"
 alias gs="git status"
 alias ga="git add"
@@ -75,6 +76,9 @@ alias gph="git push"
 alias gsh="git stash"
 alias gshp="git stash pop"
 alias gshl="git stash list"
+alias gd="git diff"
+alias gds="git diff --staged"
+alias glog="git log --oneline --graph --decorate --all"
 
 ##### fzf + zoxide
 if command -v fzf >/dev/null 2>&1; then
@@ -90,21 +94,32 @@ fi
 eval "$(zoxide init zsh)"
 
 ##### Python / pyenv
-export PATH="/opt/homebrew/opt/python@3.12/libexec/bin:$PATH"
 export PYENV_ROOT="$HOME/.pyenv"
 [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
 command -v pyenv >/dev/null && eval "$(pyenv init - zsh)"
 
-##### Node.js / nvm
+##### Node.js / nvm (lazy-loaded for faster shell startup)
 export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+if [[ -s "$NVM_DIR/nvm.sh" ]]; then
+  _nvm_load() {
+    unset -f nvm node npm npx yarn pnpm corepack
+    \. "$NVM_DIR/nvm.sh"
+    [[ -s "$NVM_DIR/bash_completion" ]] && \. "$NVM_DIR/bash_completion"
+  }
+  nvm()      { _nvm_load; nvm "$@" }
+  node()     { _nvm_load; node "$@" }
+  npm()      { _nvm_load; npm "$@" }
+  npx()      { _nvm_load; npx "$@" }
+  yarn()     { _nvm_load; yarn "$@" }
+  pnpm()     { _nvm_load; pnpm "$@" }
+  corepack() { _nvm_load; corepack "$@" }
+fi
 
 ##### Scaleway CLI autocomplete
 command -v scw >/dev/null && eval "$(scw autocomplete script shell=zsh)"
 
-##### Kubernetes kubeconfig chain
-export KUBECONFIG="/Users/william/Projects/mabyduck/build/.kube/config.Production:/Users/william/Projects/mabyduck/build/.kube/config.Staging"
+##### Machine-local config (not tracked — put KUBECONFIG, work secrets, etc. here)
+[[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
 
 ##### Editor
 export EDITOR="nvim"
@@ -113,8 +128,6 @@ export VISUAL="nvim"
 ##### Better defaults for tools
 export BAT_THEME="Catppuccin-mocha"
 export EZA_COLORS="uu=36:gu=37:sn=32:sb=32:da=34:ur=34:uw=35:ux=36:ue=36:gr=34:gw=35:gx=36:tr=34:tw=35:tx=36:"
-. "$HOME/.local/bin/env"
-export PYTHONWARNINGS="ignore::django.utils.deprecation.RemovedInDjango50Warning"
+[[ -f "$HOME/.local/bin/env" ]] && . "$HOME/.local/bin/env"
 
-# Added by Cartesia CLI installer
-export PATH="/Users/william/.cartesia/bin:$PATH"
+export PATH="$HOME/.cartesia/bin:$PATH"

@@ -1,10 +1,8 @@
 return {
-  -- Enhanced TypeScript support
   {
     "neovim/nvim-lspconfig",
     opts = {
       servers = {
-        -- Use vtsls (recommended by LazyVim for TypeScript)
         vtsls = {
           filetypes = {
             "javascript",

@@ -1,11 +1,10 @@
--- Neo-tree file explorer configuration
 return {
   "nvim-neo-tree/neo-tree.nvim",
   keys = {
     {
       "<leader>e",
       function()
-        require("neo-tree.command").execute({ toggle = true, dir = vim.loop.cwd() })
+        require("neo-tree.command").execute({ toggle = true, dir = (vim.uv or vim.loop).cwd() })
       end,
       desc = "Explorer NeoTree (cwd)",
     },
@@ -19,7 +18,7 @@ return {
     { "<leader>fe", false },
     { "<leader>fE", false },
   },
-  -- Use config to fully override LazyVim's setup
+  -- config= intentionally replaces LazyVim's neo-tree setup for full control
   config = function()
     require("neo-tree").setup({
       close_if_last_window = true,
@@ -39,21 +38,10 @@ return {
           hide_dotfiles = false,
           hide_gitignored = false,
           hide_hidden = false,
-          hide_by_name = {
-            ".DS_Store",
-            "thumbs.db",
-          },
+          hide_by_name = { ".DS_Store", "thumbs.db" },
           hide_by_pattern = {},
-          always_show = {
-            ".github",
-            ".gitignore",
-            ".env",
-            ".envrc",
-            "build",
-          },
-          always_show_by_pattern = {
-            ".env*",
-          },
+          always_show = { ".github", ".gitignore", ".env", ".envrc", "build" },
+          always_show_by_pattern = { ".env*" },
           never_show = {},
           never_show_by_pattern = {},
         },
