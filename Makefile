@@ -41,7 +41,7 @@ install-packages:
 	@echo "🍺 Installing core packages..."
 	brew install git curl neovim tmux stow
 	@echo "🔧 Installing development tools..."
-	brew install fzf fd ripgrep eza bat zoxide starship lazygit tree-sitter git-credential-manager delta gh
+	brew install fzf fd ripgrep eza bat zoxide starship lazygit tree-sitter-cli git-credential-manager delta gh
 	@echo "📝 Installing language servers and tools..."
 	brew install lua luarocks node python@3.12 pyenv
 	@echo "🖥️  Installing terminal and fonts..."
@@ -67,6 +67,7 @@ install:
 		done; \
 		stow $$pkg; \
 	done
+	@command -v bat >/dev/null 2>&1 && bat cache --build || true
 	@echo "✅ Stow complete. Backups in $$BACKUP_DIR"
 
 uninstall:
@@ -74,6 +75,7 @@ uninstall:
 
 reinstall:
 	stow -R zsh tmux kitty starship nvim git fzf shell bat
+	@command -v bat >/dev/null 2>&1 && bat cache --build || true
 
 # Individual package targets
 install-zsh:
@@ -102,6 +104,7 @@ install-shell:
 
 install-bat:
 	stow bat
+	@command -v bat >/dev/null 2>&1 && bat cache --build || true
 
 # Uninstall individual packages
 uninstall-zsh:
