@@ -23,6 +23,7 @@ To edit a config, edit the file inside `~/.dotfiles/` (or follow the symlink -- 
 | `starship` | `.config/starship.toml` |
 | `nvim` | `.config/nvim/` (full LazyVim config) |
 | `git` | `.gitconfig`, `.gitignore_global` |
+| `bat` | `.config/bat/` |
 | `fzf` | `.fzf.zsh` |
 
 ## Nvim details

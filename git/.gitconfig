@@ -12,11 +12,18 @@
 [pull]
 	rebase = false
 
+[fetch]
+	prune = true
+
+[include]
+	path = ~/.config/delta/catppuccin.gitconfig
+
 [core]
 	editor = nvim
 	autocrlf = input
 	excludesfile = ~/.gitignore_global
 	ignorecase = true
+	pager = delta
 
 [alias]
 	# Short commands
@@ -51,3 +58,18 @@
 
 [merge]
 	tool = vimdiff
+
+[credential]
+	helper = 
+	helper = manager
+
+[interactive]
+	diffFilter = delta --color-only
+
+[delta]
+	features = catppuccin-mocha
+	navigate = true
+	line-numbers = true
+	hyperlinks = true
+[credential "https://dev.azure.com"]
+	useHttpPath = true

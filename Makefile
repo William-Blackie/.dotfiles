@@ -24,6 +24,7 @@ help:
 	@echo "  make install-git      - Install git config"
 	@echo "  make install-fzf      - Install fzf config"
 	@echo "  make install-shell    - Install shell config (.zprofile)"
+	@echo "  make install-bat      - Install bat config"
 	@echo ""
 	@echo "Individual packages (uninstall):"
 	@echo "  make uninstall-{package}  - Remove specific package"
@@ -40,7 +41,7 @@ install-packages:
 	@echo "🍺 Installing core packages..."
 	brew install git curl neovim tmux stow
 	@echo "🔧 Installing development tools..."
-	brew install fzf fd ripgrep eza bat zoxide starship lazygit tree-sitter
+	brew install fzf fd ripgrep eza bat zoxide starship lazygit tree-sitter git-credential-manager delta gh
 	@echo "📝 Installing language servers and tools..."
 	brew install lua luarocks node python@3.12 pyenv
 	@echo "🖥️  Installing terminal and fonts..."
@@ -50,7 +51,7 @@ install-packages:
 install:
 	@echo "📦 Stowing dotfiles (backing up conflicts)..."
 	@BACKUP_DIR="$${HOME}/.dotfiles_backup_$$(date +%Y%m%d_%H%M%S)"; \
-	PACKAGES="zsh tmux kitty starship nvim git fzf shell"; \
+	PACKAGES="zsh tmux kitty starship nvim git fzf shell bat"; \
 	mkdir -p "$$BACKUP_DIR"; \
 	for pkg in $$PACKAGES; do \
 		echo "→ Processing $$pkg"; \
@@ -69,10 +70,10 @@ install:
 	@echo "✅ Stow complete. Backups in $$BACKUP_DIR"
 
 uninstall:
-	stow -D zsh tmux kitty starship nvim git fzf shell
+	stow -D zsh tmux kitty starship nvim git fzf shell bat
 
 reinstall:
-	stow -R zsh tmux kitty starship nvim git fzf shell
+	stow -R zsh tmux kitty starship nvim git fzf shell bat
 
 # Individual package targets
 install-zsh:
@@ -99,6 +100,9 @@ install-fzf:
 install-shell:
 	stow shell
 
+install-bat:
+	stow bat
+
 # Uninstall individual packages
 uninstall-zsh:
 	stow -D zsh
@@ -123,6 +127,9 @@ uninstall-fzf:
 
 uninstall-shell:
 	stow -D shell
+
+uninstall-bat:
+	stow -D bat
 
 status:
 	@echo "Checking symlink status..."

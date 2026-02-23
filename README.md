@@ -42,6 +42,10 @@ This installs Homebrew packages, symlinks all configs, and runs post-install set
 ├── git/
 │   ├── .gitconfig                      SSH, autoSetupRemote, vimdiff
 │   └── .gitignore_global               macOS, editor, IDE, security patterns
+├── bat/.config/bat/
+│   ├── config                           Catppuccin theme
+│   └── themes/
+│       └── Catppuccin Mocha.tmTheme     Bat syntax theme (for delta too)
 ├── fzf/.fzf.zsh                        fzf shell integration
 ├── Makefile                            make install / uninstall / status
 ├── setup.sh                            Post-install (Zinit, TPM, pyenv, fzf)

@@ -2,7 +2,8 @@
 
 # Backup existing dotfiles before installation
 
-set -e
+set -euo pipefail
+IFS=$'\n\t'
 
 BACKUP_DIR="$HOME/.dotfiles-backup-$(date +%Y%m%d-%H%M%S)"
 

@@ -16,6 +16,8 @@
 - zoxide - Smart cd command
 - starship - Cross-shell prompt
 - lazygit - Simple terminal UI for git
+- delta - Better git/diff output
+- gh - GitHub CLI
 
 ## Language Support
 - lua - Lua programming language
