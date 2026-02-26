@@ -1,73 +1,57 @@
 palette = "catppuccin_mocha"
+add_newline = false
 
 [palettes.catppuccin_mocha]
 rosewater = "#F5E0DC"
-flamingo  = "#F2CDCD"
-pink      = "#F5C2E7"
-mauve     = "#CBA6F7"
-red       = "#F38BA8"
-maroon    = "#EBA0AC"
-peach     = "#FAB387"
-yellow    = "#F9E2AF"
-green     = "#A6E3A1"
-teal      = "#94E2D5"
-sky       = "#89DCEB"
-sapphire  = "#74C7EC"
-blue      = "#89B4FA"
-lavender  = "#B4BEFE"
-text      = "#CDD6F4"
-subtext1  = "#BAC2DE"
-surface0  = "#313244"
-base      = "#1E1E2E"
+flamingo = "#F2CDCD"
+pink = "#F5C2E7"
+mauve = "#CBA6F7"
+red = "#F38BA8"
+maroon = "#EBA0AC"
+peach = "#FAB387"
+yellow = "#F9E2AF"
+green = "#A6E3A1"
+teal = "#94E2D5"
+sky = "#89DCEB"
+sapphire = "#74C7EC"
+blue = "#89B4FA"
+lavender = "#B4BEFE"
+text = "#CDD6F4"
+subtext1 = "#BAC2DE"
+surface0 = "#313244"
+base = "#1E1E2E"
 
-format = """
-[](surface0)[$directory](bold text)[](surface0)\
-$git_branch$git_state$git_status$nodejs$python$rust$docker_context
-$character
-"""
+format = "$directory$git_branch$git_status$character"
 
 [directory]
-style = "fg:text bg:surface0"
-format = "[ $path ]($style)"
+style = "bold fg:blue"
+format = "[$path]($style) "
 truncation_length = 3
 truncation_symbol = "…/"
 
-[character]
-success_symbol = "[❯](fg:blue)"
-error_symbol   = "[❯](fg:red)"
-vimcmd_symbol  = "[❮](fg:green)"
-
 [git_branch]
-format = "[](surface0)[$symbol$branch](fg:yellow bg:surface0)[](surface0) "
-symbol = " "
+symbol = " "
+style = "fg:mauve"
+format = "[$symbol$branch]($style) "
 truncation_length = 24
 
 [git_status]
-format = "([$all_status$ahead_behind]($style) )"
 style = "fg:subtext1"
-conflicted = " "
+format = "[$all_status$ahead_behind]($style) "
+conflicted = "="
 ahead = "⇡${count}"
 behind = "⇣${count}"
-modified = " "
+diverged = "⇕${ahead_count}/${behind_count}"
+modified = "!${count}"
 staged = "+${count}"
-untracked = "…${count}"
+untracked = "?${count}"
+deleted = "✕${count}"
+renamed = "»${count}"
 
-[python]
-symbol = " "
-format = "[](surface0)[$symbol$virtualenv]($style)[](surface0) "
-style = "fg:green bg:surface0"
-detect_extensions = ["py"]
-
-[nodejs]
-symbol = " "
-format = "[](surface0)[$symbol$version]($style)[](surface0) "
-style = "fg:teal bg:surface0"
-
-[docker_context]
-symbol = " "
-format = "[](surface0)[$symbol$context]($style)[](surface0) "
-style = "fg:blue bg:surface0"
-detect_files = ["docker-compose.yml", "docker-compose.yaml", "Dockerfile"]
+[character]
+success_symbol = "[❯](fg:green)"
+error_symbol = "[❯](fg:red)"
+vimcmd_symbol = "[❮](fg:blue)"
 
 [aws]
 disabled = true

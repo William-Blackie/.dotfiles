@@ -1,0 +1,7 @@
+# Vi-mode line editing for readline-based tools (some CLIs/REPLs).
+# Note: zsh uses ZLE, so this mainly helps other programs using GNU Readline.
+set editing-mode vi
+set keymap vi-command
+
+# Make Esc sequences feel snappy in readline programs
+set keyseq-timeout 1

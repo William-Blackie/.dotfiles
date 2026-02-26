@@ -1,4 +1,4 @@
-.PHONY: install uninstall reinstall status help setup-packages install-packages
+.PHONY: install uninstall reinstall status help setup-packages install-packages test-shell test-tmux test-docker check-format check-shell check-zsh-syntax check-secrets ci tune-docker
 
 # Default target
 help:
@@ -11,6 +11,15 @@ help:
 	@echo "  make uninstall   - Remove all dotfiles"
 	@echo "  make reinstall   - Reinstall all dotfiles"
 	@echo "  make status      - Show installation status"
+	@echo "  make test-shell  - Run zsh env smoke tests (nvm/npm/kube)"
+	@echo "  make test-tmux   - Run tmux bootstrap tests"
+	@echo "  make test-docker - Run Docker tuning tests"
+	@echo "  make check-shell - Lint shell scripts with shellcheck"
+	@echo "  make check-format - Verify shell script formatting with shfmt"
+	@echo "  make check-zsh-syntax - Parse zsh dotfiles for syntax errors"
+	@echo "  make check-secrets - Scan tracked files for key/token leaks"
+	@echo "  make tune-docker  - Apply local Docker CLI/Desktop tuning"
+	@echo "  make ci          - Run full local CI suite"
 	@echo ""
 	@echo "Package management:"
 	@echo "  make install-packages - Install all required packages via Homebrew"
@@ -76,6 +85,41 @@ uninstall:
 reinstall:
 	stow -R zsh tmux kitty starship nvim git fzf shell bat
 	@command -v bat >/dev/null 2>&1 && bat cache --build || true
+
+test-shell:
+	@./scripts/test-zsh-env.sh
+
+test-tmux:
+	@./scripts/test-tmux-bootstrap.sh
+
+test-docker:
+	@./scripts/test-docker-tuning.sh
+
+check-format:
+	@command -v shfmt >/dev/null 2>&1 || { echo "shfmt not found (install: brew install shfmt)"; exit 1; }
+	@files="$$(git ls-files '*.sh')"; \
+	if [ -n "$$files" ]; then \
+	  shfmt -d -i 2 -ci -sr -ln bash $$files; \
+	fi
+
+check-shell:
+	@command -v shellcheck >/dev/null 2>&1 || { echo "shellcheck not found (install: brew install shellcheck)"; exit 1; }
+	@files="$$(git ls-files '*.sh')"; \
+	if [ -n "$$files" ]; then \
+	  shellcheck -x $$files; \
+	fi
+
+check-zsh-syntax:
+	@zsh -n zsh/.zshrc shell/.zprofile shell/.zshenv
+
+check-secrets:
+	@./scripts/check-sensitive.sh
+
+tune-docker:
+	@./scripts/tune-docker-cli.sh
+	@./scripts/tune-docker-desktop-macos.sh
+
+ci: check-format check-shell check-zsh-syntax check-secrets test-shell test-tmux test-docker
 
 # Individual package targets
 install-zsh:

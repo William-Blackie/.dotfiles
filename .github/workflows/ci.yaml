@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Install system dependencies (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y zsh tmux shellcheck shfmt jq curl ca-certificates tar
+          GITLEAKS_VERSION=8.30.0
+          curl -fsSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar -xz
+          sudo install -m 0755 gitleaks /usr/local/bin/gitleaks
+          rm -f gitleaks
+
+      - name: Install system dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          set -euo pipefail
+          brew install zsh tmux shellcheck shfmt jq gitleaks
+
+      - name: Install nvm and Node.js
+        shell: bash
+        run: |
+          set -euo pipefail
+          export NVM_DIR="$HOME/.nvm"
+          curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+          source "$NVM_DIR/nvm.sh"
+          nvm install 22
+          nvm alias default 22
+          nvm use default
+          echo "NVM_DIR=$NVM_DIR" >> "$GITHUB_ENV"
+          echo "$NVM_DIR/versions/node/$(nvm version)/bin" >> "$GITHUB_PATH"
+
+      - name: Wire dotfiles symlinks
+        shell: bash
+        run: |
+          set -euo pipefail
+          ln -sfn "$GITHUB_WORKSPACE" "$HOME/.dotfiles"
+          ln -sfn "$HOME/.dotfiles/shell/.zprofile" "$HOME/.zprofile"
+          ln -sfn "$HOME/.dotfiles/zsh/.zshrc" "$HOME/.zshrc"
+          ln -sfn "$HOME/.dotfiles/shell/.zshenv" "$HOME/.zshenv"
+          ln -sfn "$HOME/.dotfiles/tmux/.tmux.conf" "$HOME/.tmux.conf"
+          : > "$HOME/.zprofile.local"
+          : > "$HOME/.zshrc.local"
+          : > "$HOME/.zshenv.local"
+
+      - name: Format check
+        run: make check-format
+
+      - name: Shell lint
+        run: make check-shell
+
+      - name: Zsh syntax check
+        run: make check-zsh-syntax
+
+      - name: Secret scan
+        run: make check-secrets
+
+      - name: zsh environment smoke test
+        run: make test-shell
+
+      - name: tmux bootstrap test
+        run: make test-tmux
+
+      - name: Docker tuning test
+        run: make test-docker

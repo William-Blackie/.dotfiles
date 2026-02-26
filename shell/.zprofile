@@ -3,3 +3,6 @@ if [[ -x "/opt/homebrew/bin/brew" ]]; then
 elif [[ -x "/usr/local/bin/brew" ]]; then
   eval "$(/usr/local/bin/brew shellenv)"
 fi
+
+# Machine-local login environment (not tracked in dotfiles repo).
+[[ -f ~/.zprofile.local ]] && source ~/.zprofile.local
