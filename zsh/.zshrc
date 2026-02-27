@@ -89,6 +89,11 @@ fi
 bindkey -v
 export KEYTIMEOUT=1   # make Esc feel instant
 
+# Edit command line in $EDITOR with 'v' in vicmd mode
+autoload -Uz edit-command-line
+zle -N edit-command-line
+bindkey -M vicmd 'v' edit-command-line
+
 # History search (prefix-aware) on Ctrl-p / Ctrl-n, in BOTH insert + normal modes
 autoload -Uz up-line-or-beginning-search down-line-or-beginning-search
 zle -N up-line-or-beginning-search
@@ -104,8 +109,65 @@ HISTFILE=~/.zsh_history
 setopt appendhistory sharehistory hist_ignore_space hist_ignore_all_dups \
        hist_save_no_dups hist_ignore_dups hist_find_no_dups
 
-##### Aliases
+##### Aliases & Helpers
 alias c="clear"
+
+# Command Cheatsheet (searchable via fzf)
+unalias cheatsheet 2>/dev/null
+cheatsheet() {
+  cat << 'EOF' | fzf --header "Terminal Cheatsheet" --reverse
+==== Navigation & Core ====
+ls    - eza (modern ls) with icons and git status
+c     - clear terminal
+vim   - neovim (modern vim)
+lg    - lazygit (terminal UI for git)
+
+==== Tmux ====
+pfs   - fuzzy project switcher (searches ~/Projects)
+start - attach or create 'main' tmux session
+tmx   - attach or create tmux session (arg: name)
+tmn   - create new unique tmux session (arg: base_name)
+tml   - list active tmux sessions
+
+==== Docker ====
+dc    - docker compose
+dcu   - docker compose up -d (detached, remove orphans)
+dcd   - docker compose down (remove orphans)
+
+==== Git ====
+g     - git
+gs    - git status
+ga    - git add
+gc    - git commit
+gcm   - git commit -m
+gco   - git checkout
+gcb   - git checkout -b
+ggb   - fuzzy branch switcher (interactive fzf)
+gpl   - git pull
+gph   - git push
+gd    - git diff
+gds   - git diff --staged
+glog  - git log (oneline, graph)
+
+==== AI / Gemini ====
+ai      - run gemini CLI
+aip     - run gemini CLI in prompt mode
+gai     - generate AI commit message for staged changes
+gge     - explain git diff/commit (arg: ref or HEAD)
+explain - explain a command using Gemini (arg: command or last one)
+
+==== Kubernetes ====
+k       - kubectl (alias)
+kkx     - switch context (interactive fzf)
+kkn     - switch namespace (interactive fzf)
+kkl     - tail pod logs (interactive fzf)
+kke     - explain kube resource/error (arg: context or last cmd)
+
+==== Reference ====
+v       - edit current command line in nvim (in vicmd mode)
+vimhelp - search vim motions cheatsheet
+EOF
+}
 
 # Vim Motion Quick Reference (searchable via fzf)
 unalias vimhelp 2>/dev/null
@@ -171,10 +233,173 @@ alias gd="git diff"
 alias gds="git diff --staged"
 alias glog="git log --oneline --graph --decorate --all"
 
+##### Node.js / nvm (lazy-loaded; only for interactive shells)
+if [[ -s "$NVM_DIR/nvm.sh" ]]; then
+  _nvm_load() {
+    # If the real nvm is already in the path, it should already be handled.
+    # But lazy functions are useful for full nvm management.
+    unset -f nvm node npm npx yarn pnpm corepack
+    \. "$NVM_DIR/nvm.sh"
+    [[ -s "$NVM_DIR/bash_completion" ]] && \. "$NVM_DIR/bash_completion"
+  }
+  nvm()      { _nvm_load; nvm "$@" }
+  node()     { _nvm_load; node "$@" }
+  npm()      { _nvm_load; npm "$@" }
+  npx()      { _nvm_load; npx "$@" }
+  yarn()     { _nvm_load; yarn "$@" }
+  pnpm()     { _nvm_load; pnpm "$@" }
+  corepack() { _nvm_load; corepack "$@" }
+fi
+
 ##### Python / pyenv
-export PYENV_ROOT="$HOME/.pyenv"
-[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
-command -v pyenv >/dev/null 2>&1 && eval "$(pyenv init - zsh)"
+# PYENV_ROOT and PATH shims are already set in .zshenv.
+# Only run init if we are interactive and want the full CLI integration.
+if command -v pyenv >/dev/null 2>&1; then
+  # Use --no-rehash for fast, non-blocking startup.
+  # Use PYENV_DISABLE_AUTO_REHASH=1 (set in .zshenv) to prevent locks.
+  eval "$(pyenv init --no-rehash - zsh)"
+fi
+
+##### Kubernetes (Kube-Wow ☸️)
+if command -v kubectl >/dev/null 2>&1; then
+  alias k="kubectl"
+  
+  # Interactive Context Switcher (requires fzf)
+  kkx() {
+    local ctx
+    ctx=$(kubectl config get-contexts -o name | fzf --header "Switch Kube Context" --reverse)
+    [[ -n "$ctx" ]] && kubectl config use-context "$ctx"
+  }
+  
+  # Interactive Namespace Switcher (requires fzf)
+  kkn() {
+    local ns
+    ns=$(kubectl get namespaces -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' | fzf --header "Switch Kube Namespace" --reverse)
+    [[ -n "$ns" ]] && kubectl config set-context --current --namespace="$ns"
+  }
+  
+  # Smart Logs - Fuzzy select pod and tail logs
+  kkl() {
+    local pod
+    pod=$(kubectl get pods --no-headers -o custom-columns=":metadata.name" | fzf --header "Tail Pod Logs" --reverse)
+    [[ -n "$pod" ]] && kubectl logs -f "$pod"
+  }
+  
+  # AI Kube Explainer
+  kke() {
+    local cmd="${1:-$(fc -ln -1)}"
+    echo "✨ Asking Gemini to explain K8s resource/event: $cmd"
+    gemini -c "Explain this Kubernetes command, resource, or error in simple terms: $cmd"
+  }
+fi
+
+##### Gemini CLI & AI Features (Wow Factor 🌟)
+if command -v gemini >/dev/null 2>&1; then
+  alias ai="gemini"
+  alias aip="gemini -p"
+  
+  # AI Command Explainer
+  # Use Gemini to explain the last command or a specific command.
+  explain() {
+    local cmd="${1:-$(fc -ln -1)}"
+    echo "✨ Asking Gemini to explain: $cmd"
+    gemini -c "Explain what this terminal command does in simple terms: $cmd"
+  }
+  
+  # AI Commit Message Generator
+  # Uses Gemini to read staged changes and write a beautiful conventional commit.
+  gai() {
+    if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+      echo "Not in a git repository."
+      return 1
+    fi
+    
+    local staged
+    staged="$(git diff --staged)"
+    if [[ -z "$staged" ]]; then
+      echo "No staged changes found. Use 'git add' first."
+      return 1
+    fi
+    
+    echo "✨ Asking Gemini to analyze changes..."
+    local prompt="Analyze the following git diff and write a concise, conventional commit message. Return ONLY the commit message text, with no markdown formatting or extra explanation:\n\n${staged}"
+    local msg
+    msg="$(gemini -c "$prompt" 2>/dev/null)"
+    
+    if [[ -n "$msg" ]]; then
+      echo "\nProposed Commit Message:"
+      echo "\033[0;32m$msg\033[0m\n"
+      echo -n "Commit with this message? [Y/n] "
+      read -q "REPLY"
+      echo
+      if [[ $REPLY =~ ^[Yy]$ || -z $REPLY ]]; then
+        git commit -m "$msg"
+      else
+        echo "Aborted."
+      fi
+    else
+      echo "❌ Failed to generate commit message."
+    fi
+  }
+
+  # AI Git Explainer
+  # Use Gemini to explain what a specific branch or commit actually does.
+  gge() {
+    if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+      echo "Not in a git repository."
+      return 1
+    fi
+    
+    local ref="${1:-HEAD}"
+    echo "✨ Asking Gemini to explain $ref..."
+    local diff
+    diff="$(git show "$ref" 2>/dev/null || git diff "$ref" 2>/dev/null)"
+    
+    if [[ -z "$diff" ]]; then
+      echo "Could not find any changes for $ref."
+      return 1
+    fi
+    
+    gemini -c "Explain what these code changes do in plain English, focusing on the functional impact: \n\n${diff}"
+  }
+fi
+
+# Fuzzy Branch Switcher
+ggb() {
+  if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    echo "Not in a git repository."
+    return 1
+  fi
+  
+  local branch
+  branch=$(git branch --all | grep -v 'HEAD' | sed 's/..//' | fzf --header "Switch Git Branch" --reverse)
+  
+  if [[ -n "$branch" ]]; then
+    # Strip remotes/origin/ for switching if needed
+    local clean_branch="${branch#remotes/origin/}"
+    git checkout "$clean_branch"
+  fi
+}
+
+# Fuzzy Project/Session Switcher
+pfs() {
+  ~/.dotfiles/scripts/project-fzf.sh
+}
+
+# Git Worktree Manager
+alias wt="~/.dotfiles/scripts/git-wt.sh"
+alias ww="wt switch" # Extra fast switcher
+
+##### Terminal Greeting (only for new login shells)
+if [[ -o login ]]; then
+  if command -v fastfetch >/dev/null 2>&1; then
+    fastfetch
+  elif command -v eza >/dev/null 2>&1; then
+    # Fallback to a nice colored directory listing
+    eza -lah --git --group-directories-first --icons --no-user --no-time -TL 1
+  fi
+fi
+
 
 ##### Scaleway CLI autocomplete
 command -v scw >/dev/null 2>&1 && eval "$(scw autocomplete script shell=zsh)"

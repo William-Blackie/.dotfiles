@@ -22,10 +22,10 @@
 ## Language Support
 - lua - Lua programming language
 - luarocks - Lua package manager
-- node - Node.js runtime
-- python@3.12 - Python 3.12
+- nvm - Node Version Manager (for Node.js)
 - pyenv - Python version manager
 - tree-sitter - Syntax highlighting
+- @google/gemini-cli - Gemini AI terminal assistant
 
 ## Terminal & Fonts
 - kitty - Fast GPU-accelerated terminal emulator

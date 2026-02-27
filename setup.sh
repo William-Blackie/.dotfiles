@@ -38,21 +38,40 @@ fi
 # Setup pyenv
 echo "🐍 Setting up pyenv..."
 if command -v pyenv > /dev/null 2>&1; then
-  echo "Installing latest Python..."
-  LATEST_PYTHON=$(pyenv install --list | grep -E "^\s*3\.[0-9]+\.[0-9]+$" | tail -n 1 | tr -d ' ')
-  if [[ -n "$LATEST_PYTHON" ]]; then
-    pyenv install -s "$LATEST_PYTHON"
-    pyenv global "$LATEST_PYTHON"
-    echo "Python $LATEST_PYTHON installed and set as global"
+  if [[ "${SKIP_PYENV_INSTALL:-0}" == "1" ]]; then
+    echo "Skipping pyenv Python installation (SKIP_PYENV_INSTALL=1)"
+  else
+    echo "Installing latest Python..."
+    LATEST_PYTHON=$(pyenv install --list | grep -E "^\s*3\.[0-9]+\.[0-9]+$" | tail -n 1 | tr -d ' ')
+    if [[ -n "$LATEST_PYTHON" ]]; then
+      pyenv install -s "$LATEST_PYTHON"
+      pyenv global "$LATEST_PYTHON"
+      echo "Python $LATEST_PYTHON installed and set as global"
+    fi
   fi
 fi
 
-# Setup Node.js with latest LTS
-echo "📦 Setting up Node.js..."
-if command -v node > /dev/null 2>&1; then
-  echo "Node.js already available via Homebrew"
+# Setup Node.js with nvm
+echo "📦 Setting up Node.js (nvm)..."
+export NVM_DIR="$HOME/.nvm"
+if [[ ! -d "$NVM_DIR" ]]; then
+  echo "Installing nvm..."
+  curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+  # Load nvm for the rest of this script if needed
+  [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 else
-  echo "Node.js not found - you may want to install it"
+  echo "nvm already installed"
+fi
+
+if command -v nvm > /dev/null 2>&1; then
+  echo "Installing latest LTS Node.js..."
+  nvm install --lts
+  nvm alias default 'lts/*'
+  echo "Node.js LTS installed and set as default"
+  
+  # Install Gemini CLI (Wow Factor 🌟)
+  echo "Installing Gemini CLI..."
+  npm install -g @google/gemini-cli
 fi
 
 # Setup tmux plugin manager

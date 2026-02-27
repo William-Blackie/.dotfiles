@@ -53,12 +53,12 @@ probe_mode() {
   if ! output="$(
     zsh "$mode" '
 set -e
-type nvm >/dev/null 2>&1
-# Trigger lazy wrappers so command -v resolves actual binaries.
-node -v >/dev/null 2>&1
-npm -v >/dev/null 2>&1
-node_path="$(command -v node)"
-npm_path="$(command -v npm)"
+type nvm >/dev/null 2>&1 || true
+# Trigger lazy wrappers so command -v resolves actual binaries (if in interactive mode).
+node -v >/dev/null 2>&1 || true
+npm -v >/dev/null 2>&1 || true
+node_path="$(command -v node || echo "not found")"
+npm_path="$(command -v npm || echo "not found")"
 npm_prefix="$(npm prefix -g 2>/dev/null || true)"
 echo "node_path=$node_path"
 echo "npm_path=$npm_path"
@@ -74,6 +74,11 @@ echo "npm_prefix=$npm_prefix"
   node_path="$(printf "%s\n" "$output" | sed -n 's/^node_path=//p' | tail -n 1)"
   npm_path="$(printf "%s\n" "$output" | sed -n 's/^npm_path=//p' | tail -n 1)"
   npm_prefix="$(printf "%s\n" "$output" | sed -n 's/^npm_prefix=//p' | tail -n 1)"
+
+  # Strip /private on macOS to ensure path comparisons match $HOME
+  node_path="${node_path#/private}"
+  npm_path="${npm_path#/private}"
+  npm_prefix="${npm_prefix#/private}"
 
   if [[ "$node_path" == "$HOME"/.nvm/versions/node/*/bin/node ]]; then
     ok "zsh $mode resolves node via nvm ($node_path)"

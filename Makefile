@@ -19,7 +19,8 @@ help:
 	@echo "  make check-zsh-syntax - Parse zsh dotfiles for syntax errors"
 	@echo "  make check-secrets - Scan tracked files for key/token leaks"
 	@echo "  make tune-docker  - Apply local Docker CLI/Desktop tuning"
-	@echo "  make ci          - Run full local CI suite"
+	@echo "  make test        - Run all environment tests (nvm/npm/tmux/docker/secrets)"
+	@echo "  make ci          - Run full local CI suite (checks + tests)"
 	@echo ""
 	@echo "Package management:"
 	@echo "  make install-packages - Install all required packages via Homebrew"
@@ -52,7 +53,9 @@ install-packages:
 	@echo "🔧 Installing development tools..."
 	brew install fzf fd ripgrep eza bat zoxide starship lazygit tree-sitter-cli git-credential-manager delta gh
 	@echo "📝 Installing language servers and tools..."
-	brew install lua luarocks node python@3.12 pyenv
+	brew install lua luarocks pyenv
+	@echo "🌟 Installing Gemini CLI..."
+	npm install -g @google/gemini-cli
 	@echo "🖥️  Installing terminal and fonts..."
 	brew install --cask kitty font-jetbrains-mono-nerd-font
 	@echo "✅ All packages installed!"
@@ -119,7 +122,13 @@ tune-docker:
 	@./scripts/tune-docker-cli.sh
 	@./scripts/tune-docker-desktop-macos.sh
 
-ci: check-format check-shell check-zsh-syntax check-secrets test-shell test-tmux test-docker
+test:
+	@chmod +x ./scripts/run-all-tests.sh ./scripts/test-bootstrap.sh ./scripts/test-aliases.sh
+	@./scripts/run-all-tests.sh
+	@./scripts/test-bootstrap.sh
+	@./scripts/test-aliases.sh
+
+ci: check-format check-shell check-zsh-syntax check-secrets test
 
 # Individual package targets
 install-zsh:

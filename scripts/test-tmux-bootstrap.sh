@@ -133,6 +133,9 @@ node_exec="$(sed -n 's/^node_exec=//p' "$PROBE_OUT" | tail -n 1)"
 npm_prefix="$(sed -n 's/^npm_prefix=//p' "$PROBE_OUT" | tail -n 1)"
 nvm_dir="$(sed -n 's/^nvm_dir=//p' "$PROBE_OUT" | tail -n 1)"
 
+node_exec="${node_exec#/private}"
+npm_prefix="${npm_prefix#/private}"
+
 [[ "$node_exec" == "$HOME"/.nvm/versions/node/*/bin/node ]] || {
   echo "FAIL: node path in tmux is not nvm-managed ($node_exec)"
   exit 1

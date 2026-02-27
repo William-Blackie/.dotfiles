@@ -44,49 +44,16 @@ jobs:
           set -euo pipefail
           brew install zsh tmux shellcheck shfmt jq gitleaks
 
-      - name: Install nvm and Node.js
+      - name: Prepare dotfiles path
         shell: bash
         run: |
           set -euo pipefail
-          export NVM_DIR="$HOME/.nvm"
-          curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
-          source "$NVM_DIR/nvm.sh"
-          nvm install 22
-          nvm alias default 22
-          nvm use default
-          echo "NVM_DIR=$NVM_DIR" >> "$GITHUB_ENV"
-          echo "$NVM_DIR/versions/node/$(nvm version)/bin" >> "$GITHUB_PATH"
-
-      - name: Wire dotfiles symlinks
-        shell: bash
-        run: |
-          set -euo pipefail
+          # The makefile and scripts expect to be at ~/.dotfiles
           ln -sfn "$GITHUB_WORKSPACE" "$HOME/.dotfiles"
-          ln -sfn "$HOME/.dotfiles/shell/.zprofile" "$HOME/.zprofile"
-          ln -sfn "$HOME/.dotfiles/zsh/.zshrc" "$HOME/.zshrc"
-          ln -sfn "$HOME/.dotfiles/shell/.zshenv" "$HOME/.zshenv"
-          ln -sfn "$HOME/.dotfiles/tmux/.tmux.conf" "$HOME/.tmux.conf"
+          # Create local overrides to avoid 'not found' warnings in CI
           : > "$HOME/.zprofile.local"
           : > "$HOME/.zshrc.local"
           : > "$HOME/.zshenv.local"
 
-      - name: Format check
-        run: make check-format
-
-      - name: Shell lint
-        run: make check-shell
-
-      - name: Zsh syntax check
-        run: make check-zsh-syntax
-
-      - name: Secret scan
-        run: make check-secrets
-
-      - name: zsh environment smoke test
-        run: make test-shell
-
-      - name: tmux bootstrap test
-        run: make test-tmux
-
-      - name: Docker tuning test
-        run: make test-docker
+      - name: Run CI (Checks + Tests)
+        run: make ci
