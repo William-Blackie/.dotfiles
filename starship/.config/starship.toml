@@ -1,5 +1,8 @@
+# Starship Configuration (Refined for Go, Node, Kube, Docker, and Python)
+# Theme: Catppuccin Mocha
+
 palette = "catppuccin_mocha"
-add_newline = false
+add_newline = true
 
 [palettes.catppuccin_mocha]
 rosewater = "#F5E0DC"
@@ -21,13 +24,21 @@ subtext1 = "#BAC2DE"
 surface0 = "#313244"
 base = "#1E1E2E"
 
-format = "$directory$git_branch$git_status$character"
+# Line 1: Context (Dir, Git, Languages, Infra)
+# Line 2: Action (Character)
+format = """
+$directory$git_branch$git_status$c$golang$nodejs$python$rust$lua$docker_context$kubernetes$cmd_duration
+$character"""
+
+command_timeout = 500
 
 [directory]
 style = "bold fg:blue"
 format = "[$path]($style) "
 truncation_length = 3
 truncation_symbol = "…/"
+read_only = " 󰌾"
+
 
 [git_branch]
 symbol = " "
@@ -37,7 +48,7 @@ truncation_length = 24
 
 [git_status]
 style = "fg:subtext1"
-format = "[$all_status$ahead_behind]($style) "
+format = "([$all_status$ahead_behind]($style) )"
 conflicted = "="
 ahead = "⇡${count}"
 behind = "⇣${count}"
@@ -53,8 +64,56 @@ success_symbol = "[❯](fg:green)"
 error_symbol = "[❯](fg:red)"
 vimcmd_symbol = "[❮](fg:blue)"
 
+[golang]
+symbol = " "
+style = "bold cyan"
+format = "[$symbol($version )]($style)"
+
+[nodejs]
+symbol = " "
+style = "bold green"
+format = "[$symbol($version )]($style)"
+
+[python]
+symbol = " "
+style = "bold yellow"
+format = "[$symbol($version )(\\($virtualenv\\) )]($style)"
+pyenv_prefix = "pyenv "
+
+[rust]
+symbol = " "
+style = "bold maroon"
+format = "[$symbol($version )]($style)"
+
+[lua]
+symbol = " "
+style = "bold blue"
+format = "[$symbol($version )]($style)"
+
+[docker_context]
+symbol = " "
+style = "bold sky"
+format = "[$symbol$context]($style) "
+
+[kubernetes]
+symbol = "󱃾 "
+style = "bold blue"
+disabled = false
+format = "[$symbol$context( \\($namespace\\))]($style) "
+
+[cmd_duration]
+min_time = 2_000
+style = "fg:yellow"
+format = "took [$duration]($style) "
+
 [aws]
 disabled = true
 
 [gcloud]
+disabled = true
+
+[terraform]
+disabled = true
+
+[ruby]
 disabled = true

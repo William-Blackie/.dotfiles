@@ -8,10 +8,10 @@ return {
     end,
   },
   {
-    "williamboman/mason.nvim",
+    "mason-org/mason.nvim",
     opts = function(_, opts)
       if type(opts.ensure_installed) == "table" then
-        vim.list_extend(opts.ensure_installed, { "djlint" }) -- djlint is great for Django templates
+        vim.list_extend(opts.ensure_installed, { "djlint" })
       end
     end,
   },

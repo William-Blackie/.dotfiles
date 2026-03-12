@@ -1,9 +1,11 @@
 return {
   {
-    "mason-org/mason.nvim",
+    "mason-org/mason-lspconfig.nvim",
     opts = function(_, opts)
       opts.ensure_installed = opts.ensure_installed or {}
-      vim.list_extend(opts.ensure_installed, { "stylelint-lsp" })
+      if not vim.tbl_contains(opts.ensure_installed, "stylelint_lsp") then
+        table.insert(opts.ensure_installed, "stylelint_lsp")
+      end
     end,
   },
   {

@@ -1,6 +1,6 @@
 # Dotfiles
 
-Catppuccin Mocha everywhere, vim keybindings everywhere, managed with GNU Stow.
+Terminal, editor, and tmux setup for a keyboard-first development workflow.
 
 ## Setup
 
@@ -10,7 +10,7 @@ cd ~/.dotfiles
 make setup
 ```
 
-This installs Homebrew packages, symlinks all configs, and runs post-install setup (Zinit, TPM, pyenv, fzf integration).
+This installs packages, symlinks configs with GNU Stow, hydrates local secrets, and runs post-install setup.
 
 ## Structure
 
@@ -24,7 +24,7 @@ This installs Homebrew packages, symlinks all configs, and runs post-install set
 ├── kitty/.config/kitty/
 │   ├── kitty.conf                      JetBrainsMono Nerd Font, no bell
 │   └── catppuccin-mocha.conf           Color palette
-├── starship/.config/starship.toml      Two-line prompt with git, python, node, docker
+├── starship/.config/starship.toml      Two-line prompt with git, python, node
 ├── nvim/.config/nvim/                  LazyVim with custom plugins
 │   ├── lua/config/
 │   │   ├── lazy.lua                    Plugin manager bootstrap
@@ -66,6 +66,13 @@ This installs Homebrew packages, symlinks all configs, and runs post-install set
 | `dc` | `docker compose` shortcut |
 | `dcu` | `docker compose up -d --remove-orphans` |
 | `dcd` | `docker compose down --remove-orphans` |
+| `p` / `pfs` | open the Grove project picker |
+| `wtl` | list worktrees via `grove` |
+| `wta <branch>` | create a new worktree branch |
+| `wts [index...]` | start worktree services |
+| `wtx [index...]` | stop worktree services |
+| `wtp <index>` | promote worktree changes |
+| `k9s` | Kubernetes terminal UI |
 | `z <dir>` | zoxide smart cd |
 | `C-t` | fzf file picker in shell |
 | `C-r` | fzf history search |
@@ -102,6 +109,8 @@ New sessions created via `start`/`tmx`/`tmn` bootstrap with two windows in the c
 | `<leader>as` | Send selection to Claude (visual mode) |
 | `<leader>gp` | List PRs (Octo) |
 | `<leader>gi` | List issues (Octo) |
+| `<leader>k` | Open k9s |
+| `<leader>kg` | Open local Grafana (`GRAFANA_URL`, then `:13000`, fallback `:3000`) |
 
 ## Managing configs
 
@@ -112,18 +121,17 @@ make install              # Stow all packages
 make uninstall            # Unstow all
 make reinstall            # Re-stow all (fixes broken links)
 make status               # Check what's linked and what's installed
-make test-shell           # Smoke-test zsh env wiring (nvm/npm/kube)
-make test-tmux            # Validate clean tmux session bootstrap behavior
 make check-shell          # shellcheck scripts
 make check-format         # shfmt check for shell scripts
 make check-secrets        # Scan for committed tokens/keys
+make hydrate              # Write local config files from 1Password/Bitwarden
 make tune-docker          # Apply local Docker CLI/Desktop tuning
-make test-docker          # Validate Docker tuning scripts
+make test                 # Run the current E2E smoke suite
 make ci                   # Run full local CI suite
-make install-nvim         # Stow a single package
-make uninstall-tmux       # Unstow a single package
 stow -R shell             # Re-stow directly with stow
 ```
+
+`make hydrate` uses native `op` and `bw` CLI access. It looks up secure notes like `F_AWS_CONFIG` and writes them to their local file destinations.
 
 ## After pulling changes
 
@@ -131,7 +139,7 @@ stow -R shell             # Re-stow directly with stow
 cd ~/.dotfiles && make reinstall
 ```
 
-Then in nvim: `:Lazy sync` and `:TSUpdate`.
+Then in nvim: `:Lazy sync`.
 In tmux: `prefix + I` to install any new plugins, then restart tmux for theme changes.
 
 ## CI
@@ -140,9 +148,8 @@ GitHub Actions runs `.github/workflows/ci.yaml` on push/PR to enforce:
 - shell formatting (`shfmt`)
 - shell linting (`shellcheck`)
 - secret/key pattern scanning
-- zsh env smoke tests
-- tmux clean-session bootstrap tests
-- Docker tuning script tests
+- zsh syntax checks
+- the current Docker-backed E2E smoke suite
 
 ## Docker Tuning
 

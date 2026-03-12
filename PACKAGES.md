@@ -18,11 +18,16 @@
 - lazygit - Simple terminal UI for git
 - delta - Better git/diff output
 - gh - GitHub CLI
+- docker - Container engine
+- kind - Kubernetes IN Docker
+- k9s - Kubernetes terminal UI
+- kubectl - Kubernetes CLI
 
 ## Language Support
 - lua - Lua programming language
 - luarocks - Lua package manager
 - nvm - Node Version Manager (for Node.js)
+- worktree-compose - Git worktree isolation for Docker
 - pyenv - Python version manager
 - tree-sitter - Syntax highlighting
 - @google/gemini-cli - Gemini AI terminal assistant
@@ -37,3 +42,5 @@ These are installed via the setup script:
 - TPM - Tmux plugin manager
 - fzf shell integration
 - Python latest version via pyenv
+- blueutil - Bluetooth CLI for macOS
+- switchaudio-osx - Audio switcher CLI for macOS

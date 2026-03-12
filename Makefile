@@ -1,4 +1,4 @@
-.PHONY: install uninstall reinstall status help setup-packages install-packages test-shell test-tmux test-docker check-format check-shell check-zsh-syntax check-secrets ci tune-docker
+.PHONY: install uninstall reinstall status help setup-packages install-packages test-shell test-tmux test-docker check-format check-shell check-zsh-syntax check-secrets ci tune-docker normalize-stow-links setup hydrate
 
 # Default target
 help:
@@ -11,33 +11,17 @@ help:
 	@echo "  make uninstall   - Remove all dotfiles"
 	@echo "  make reinstall   - Reinstall all dotfiles"
 	@echo "  make status      - Show installation status"
-	@echo "  make test-shell  - Run zsh env smoke tests (nvm/npm/kube)"
-	@echo "  make test-tmux   - Run tmux bootstrap tests"
-	@echo "  make test-docker - Run Docker tuning tests"
 	@echo "  make check-shell - Lint shell scripts with shellcheck"
 	@echo "  make check-format - Verify shell script formatting with shfmt"
 	@echo "  make check-zsh-syntax - Parse zsh dotfiles for syntax errors"
 	@echo "  make check-secrets - Scan tracked files for key/token leaks"
+	@echo "  make hydrate     - Write local config files from 1Password/Bitwarden"
 	@echo "  make tune-docker  - Apply local Docker CLI/Desktop tuning"
-	@echo "  make test        - Run all environment tests (nvm/npm/tmux/docker/secrets)"
+	@echo "  make test        - Run all E2E environment tests"
 	@echo "  make ci          - Run full local CI suite (checks + tests)"
 	@echo ""
 	@echo "Package management:"
-	@echo "  make install-packages - Install all required packages via Homebrew"
-	@echo ""
-	@echo "Individual packages (install):"
-	@echo "  make install-zsh      - Install zsh config"
-	@echo "  make install-tmux     - Install tmux config"
-	@echo "  make install-kitty    - Install kitty config"
-	@echo "  make install-starship - Install starship config"
-	@echo "  make install-nvim     - Install nvim config"
-	@echo "  make install-git      - Install git config"
-	@echo "  make install-fzf      - Install fzf config"
-	@echo "  make install-shell    - Install shell config (.zprofile)"
-	@echo "  make install-bat      - Install bat config"
-	@echo ""
-	@echo "Individual packages (uninstall):"
-	@echo "  make uninstall-{package}  - Remove specific package"
+	@echo "  make install-packages - Install all required packages"
 
 setup: install-packages install
 	@echo "🔧 Running additional setup..."
@@ -46,21 +30,23 @@ setup: install-packages install
 	@echo "Please restart your terminal or run: source ~/.zshrc"
 
 install-packages:
-	@echo "📦 Installing packages via Homebrew..."
-	@command -v brew >/dev/null 2>&1 || { echo "Installing Homebrew..."; /bin/bash -c "$$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; }
-	@echo "🍺 Installing core packages..."
-	brew install git curl neovim tmux stow
-	@echo "🔧 Installing development tools..."
-	brew install fzf fd ripgrep eza bat zoxide starship lazygit tree-sitter-cli git-credential-manager delta gh
-	@echo "📝 Installing language servers and tools..."
-	brew install lua luarocks pyenv
-	@echo "🌟 Installing Gemini CLI..."
-	npm install -g @google/gemini-cli
-	@echo "🖥️  Installing terminal and fonts..."
-	brew install --cask kitty font-jetbrains-mono-nerd-font
-	@echo "✅ All packages installed!"
+	@./scripts/install-packages.sh
+
+normalize-stow-links:
+	@target="$$HOME/.zshenv"; \
+	if [ -L "$$target" ]; then \
+		link="$$(readlink "$$target")"; \
+		case "$$link" in \
+			"$(CURDIR)/shell/.zshenv"|"$${HOME}/.dotfiles/shell/.zshenv") \
+				echo "🔧 Normalizing absolute symlink $$target"; \
+				ln -snf ".dotfiles/shell/.zshenv" "$$target";; \
+		esac; \
+	fi
 
 install:
+	@$(MAKE) normalize-stow-links
+	@echo "💧 Hydrating all secrets from vault..."
+	@$(MAKE) hydrate
 	@echo "📦 Stowing dotfiles (backing up conflicts)..."
 	@BACKUP_DIR="$${HOME}/.dotfiles_backup_$$(date +%Y%m%d_%H%M%S)"; \
 	PACKAGES="zsh tmux kitty starship nvim git fzf shell bat"; \
@@ -86,27 +72,57 @@ uninstall:
 	stow -D zsh tmux kitty starship nvim git fzf shell bat
 
 reinstall:
+	@$(MAKE) normalize-stow-links
 	stow -R zsh tmux kitty starship nvim git fzf shell bat
 	@command -v bat >/dev/null 2>&1 && bat cache --build || true
 
-test-shell:
-	@./scripts/test-zsh-env.sh
-
-test-tmux:
-	@./scripts/test-tmux-bootstrap.sh
-
-test-docker:
-	@./scripts/test-docker-tuning.sh
+hydrate:
+	@bash -lc '\
+	set -euo pipefail; \
+	read_secret() { \
+		key="$$1"; \
+		if command -v op >/dev/null 2>&1 && op account list >/dev/null 2>&1; then \
+			op item get "$$key" --vault="Employee" --fields label=notesPlain --reveal 2>/dev/null && return 0; \
+		fi; \
+		if command -v bw >/dev/null 2>&1; then \
+			status="$$(bw status 2>/dev/null || true)"; \
+			if printf "%s" "$$status" | grep -q "\"status\":\"unlocked\""; then \
+				bw get item "$$key" 2>/dev/null | python3 -c "import json,sys; data=json.load(sys.stdin); data=data[0] if isinstance(data,list) and data else data; print(data.get(\"notes\",\"\"), end=\"\")" && return 0; \
+			fi; \
+		fi; \
+		return 1; \
+	}; \
+	write_secret() { \
+		key="$$1"; dest="$$2"; \
+		content="$$(read_secret "$$key" || true)"; \
+		if [ -n "$$content" ]; then \
+			echo "  → Hydrating $$dest"; \
+			mkdir -p "$$(dirname "$$dest")"; \
+			printf "%s\n" "$$content" > "$$dest"; \
+			chmod 600 "$$dest"; \
+		fi; \
+	}; \
+	echo "💧 Hydrating local config files..."; \
+	write_secret F_AWS_CONFIG "$$HOME/.aws/config"; \
+	write_secret F_AWS_CREDENTIALS "$$HOME/.aws/credentials"; \
+	write_secret F_KUBECONFIG "$$HOME/.kube/config"; \
+	write_secret F_SSH_PRIVATE_KEY "$$HOME/.ssh/id_ed25519"; \
+	write_secret F_SSH_PUBLIC_KEY "$$HOME/.ssh/id_ed25519.pub"; \
+	write_secret F_GITCONFIG_MABYDUCK "$$HOME/.gitconfig-mabyduck"; \
+	write_secret F_GITCONFIG_DEVELOPERFY "$$HOME/.gitconfig-developerfy"; \
+	write_secret F_GITCONFIG_PERSONAL "$$HOME/.gitconfig-personal"; \
+	echo "✅ Hydration complete."; \
+	'
 
 check-format:
-	@command -v shfmt >/dev/null 2>&1 || { echo "shfmt not found (install: brew install shfmt)"; exit 1; }
+	@command -v shfmt >/dev/null 2>&1 || { echo "shfmt not found"; exit 1; }
 	@files="$$(git ls-files '*.sh')"; \
 	if [ -n "$$files" ]; then \
 	  shfmt -d -i 2 -ci -sr -ln bash $$files; \
 	fi
 
 check-shell:
-	@command -v shellcheck >/dev/null 2>&1 || { echo "shellcheck not found (install: brew install shellcheck)"; exit 1; }
+	@command -v shellcheck >/dev/null 2>&1 || { echo "shellcheck not found"; exit 1; }
 	@files="$$(git ls-files '*.sh')"; \
 	if [ -n "$$files" ]; then \
 	  shellcheck -x $$files; \
@@ -118,88 +134,22 @@ check-zsh-syntax:
 check-secrets:
 	@./scripts/check-sensitive.sh
 
+test:
+	@python3 ./scripts/test_e2e.py
+
 tune-docker:
 	@./scripts/tune-docker-cli.sh
 	@./scripts/tune-docker-desktop-macos.sh
 
-test:
-	@chmod +x ./scripts/run-all-tests.sh ./scripts/test-bootstrap.sh ./scripts/test-aliases.sh
-	@./scripts/run-all-tests.sh
-	@./scripts/test-bootstrap.sh
-	@./scripts/test-aliases.sh
-
 ci: check-format check-shell check-zsh-syntax check-secrets test
-
-# Individual package targets
-install-zsh:
-	stow zsh
-
-install-tmux:
-	stow tmux
-
-install-kitty:
-	stow kitty
-
-install-starship:
-	stow starship
-
-install-nvim:
-	stow nvim
-
-install-git:
-	stow git
-
-install-fzf:
-	stow fzf
-
-install-shell:
-	stow shell
-
-install-bat:
-	stow bat
-	@command -v bat >/dev/null 2>&1 && bat cache --build || true
-
-# Uninstall individual packages
-uninstall-zsh:
-	stow -D zsh
-
-uninstall-tmux:
-	stow -D tmux
-
-uninstall-kitty:
-	stow -D kitty
-
-uninstall-starship:
-	stow -D starship
-
-uninstall-nvim:
-	stow -D nvim
-
-uninstall-git:
-	stow -D git
-
-uninstall-fzf:
-	stow -D fzf
-
-uninstall-shell:
-	stow -D shell
-
-uninstall-bat:
-	stow -D bat
 
 status:
 	@echo "Checking symlink status..."
 	@ls -la ~/{.zshrc,.tmux.conf,.gitconfig} 2>/dev/null | grep -E "\.dotfiles" || echo "Some configs not linked"
-	@ls -la ~/.config/{kitty,nvim,starship.toml} 2>/dev/null | grep -E "\.dotfiles" || echo "Some .config items not linked"
 	@echo ""
 	@echo "Checking installed packages..."
-	@command -v brew >/dev/null && echo "✅ Homebrew installed" || echo "❌ Homebrew not installed"
 	@command -v git >/dev/null && echo "✅ git installed" || echo "❌ git not installed"
 	@command -v nvim >/dev/null && echo "✅ neovim installed" || echo "❌ neovim not installed"
 	@command -v tmux >/dev/null && echo "✅ tmux installed" || echo "❌ tmux not installed"
 	@command -v starship >/dev/null && echo "✅ starship installed" || echo "❌ starship not installed"
 	@command -v fzf >/dev/null && echo "✅ fzf installed" || echo "❌ fzf not installed"
-	@command -v eza >/dev/null && echo "✅ eza installed" || echo "❌ eza not installed"
-	@command -v bat >/dev/null && echo "✅ bat installed" || echo "❌ bat not installed"
-	@command -v zoxide >/dev/null && echo "✅ zoxide installed" || echo "❌ zoxide not installed"
-	@command -v lazygit >/dev/null && echo "✅ lazygit installed" || echo "❌ lazygit not installed"

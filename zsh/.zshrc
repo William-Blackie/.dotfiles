@@ -1,12 +1,36 @@
-##### Homebrew (macOS)
-# Guard against double-init when .zprofile already ran this in a login shell
-if [[ -z "$HOMEBREW_PREFIX" ]]; then
-  if [[ -x "/opt/homebrew/bin/brew" ]]; then
-    eval "$(/opt/homebrew/bin/brew shellenv)"
-  elif [[ -x "/usr/local/bin/brew" ]]; then
-    eval "$(/usr/local/bin/brew shellenv)"
-  fi
+setopt extendedglob
+
+##### Modular Config Loader
+# Load machine-independent paths first
+source "$HOME/.dotfiles/zsh/lib/path.zsh"
+
+##### Python / pyenv (Lazy-loaded for speed)
+# Shims are already in PATH from path.zsh for transparent use.
+# Shell integration is loaded only when the pyenv command is first called.
+if command -v pyenv >/dev/null 2>&1; then
+  pyenv() {
+    unset -f pyenv
+    eval "$(command pyenv init -)"
+    pyenv "$@"
+  }
 fi
+
+# ... Load any other modular configs (Tracked)
+for config_file in "$HOME/.dotfiles/zsh/lib"/*.zsh(N); do
+  if [[ "$config_file" != */path.zsh ]]; then
+    source "$config_file"
+  fi
+done
+
+# Load machine-local drop-ins (Untracked)
+for local_config in "$HOME/.zshrc.d"/*.zsh(N); do
+  source "$local_config"
+done
+
+# Optional private/work overrides (kept separate if needed)
+for work_config in "$HOME/.dotfiles-work/zsh"/*.zsh(N); do
+  source "$work_config"
+done
 
 ##### Zinit (plugin manager)
 ZINIT_HOME="${XDG_DATA_HOME:-${HOME}/.local/share}/zinit/zinit.git"
@@ -29,7 +53,6 @@ if (( $+functions[zinit] )); then
   zinit snippet OMZL::git.zsh
   zinit snippet OMZP::git
   zinit snippet OMZP::sudo
-  zinit snippet OMZP::aws
   zinit snippet OMZP::kubectl
   zinit snippet OMZP::kubectx
   zinit snippet OMZP::command-not-found
@@ -44,7 +67,18 @@ fi
 
 ##### Completions
 [[ -d "$HOME/.docker/completions" ]] && fpath=("$HOME/.docker/completions" $fpath)
-autoload -Uz compinit && compinit
+
+# Optimize compinit by only running it once a day
+ZCOMPDUMP="${ZDOTDIR:-$HOME}/.zcompdump"
+if [[ -s "$ZCOMPDUMP" && (! -f "$ZCOMPDUMP.zwc" || "$ZCOMPDUMP" -nt "$ZCOMPDUMP.zwc") ]]; then
+  zcompile "$ZCOMPDUMP"
+fi
+
+if [[ -n "$ZCOMPDUMP"(#qN.m-1) ]]; then
+  autoload -Uz compinit && compinit -C
+else
+  autoload -Uz compinit && compinit
+fi
 zstyle ':completion:*' menu select
 zstyle ':completion:*:descriptions' format '%F{245}%d%f'
 zstyle ':completion:*:warnings' format '%F{203}no matches for:%f %d'
@@ -54,7 +88,7 @@ if command -v fzf >/dev/null 2>&1; then
   [[ -f ~/.fzf.zsh ]] && source ~/.fzf.zsh
   export FZF_DEFAULT_COMMAND="fd --type f --hidden --follow --exclude .git"
   export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
-  # Catppuccin Mocha, pared down for a minimal interface.
+  # Catppuccin Mocha theme
   export FZF_DEFAULT_OPTS=" \
 --height=40% --layout=reverse --border --info=inline-right \
 --color=bg:#1e1e2e,bg+:#313244,spinner:#f5c2e7,hl:#89b4fa \
@@ -72,18 +106,29 @@ if (( $+functions[zinit] )); then
 fi
 zstyle ':fzf-tab:*' fzf-flags --height=40% --layout=reverse --border
 
-# Better vi-mode (configuration only here, loading at the end)
+# Vi-mode configuration
 ZVM_VI_INSERT_ESCAPE_BINDKEY=jk # allow 'jk' to exit insert mode
 ZVM_LINE_BEFORE_PROMPT=false     # keep prompt compact
 
+# gh completion (lazy-loaded on first use)
 if command -v gh >/dev/null 2>&1; then
-  eval "$(gh completion -s zsh)"
+  _gh_load_completion() {
+    eval "$(command gh completion -s zsh)"
+    # After loading, call the real completion function
+    _gh "$@"
+  }
+  compdef _gh_load_completion gh
 fi
 
 ##### Prompt (Starship + Catppuccin)
-if command -v starship >/dev/null 2>&1; then
+if [[ -z "$STARSHIP_SHELL" ]] && command -v starship >/dev/null 2>&1; then
   eval "$(starship init zsh)"
 fi
+
+##### Keybindings & history (vim-style)
+# ... (rest of the file)
+# (I'll need to find where scw is)
+
 
 ##### Keybindings & history (vim-style)
 bindkey -v
@@ -94,7 +139,7 @@ autoload -Uz edit-command-line
 zle -N edit-command-line
 bindkey -M vicmd 'v' edit-command-line
 
-# History search (prefix-aware) on Ctrl-p / Ctrl-n, in BOTH insert + normal modes
+# History search (prefix-aware)
 autoload -Uz up-line-or-beginning-search down-line-or-beginning-search
 zle -N up-line-or-beginning-search
 zle -N down-line-or-beginning-search
@@ -115,7 +160,7 @@ alias c="clear"
 # Command Cheatsheet (searchable via fzf)
 unalias cheatsheet 2>/dev/null
 cheatsheet() {
-  cat << 'EOF' | fzf --header "Terminal Cheatsheet" --reverse
+  local base_content=$(cat << 'EOF'
 ==== Navigation & Core ====
 ls    - eza (modern ls) with icons and git status
 c     - clear terminal
@@ -134,20 +179,26 @@ dc    - docker compose
 dcu   - docker compose up -d (detached, remove orphans)
 dcd   - docker compose down (remove orphans)
 
-==== Git ====
-g     - git
+==== Git Core ====
 gs    - git status
 ga    - git add
 gc    - git commit
-gcm   - git commit -m
-gco   - git checkout
-gcb   - git checkout -b
-ggb   - fuzzy branch switcher (interactive fzf)
 gpl   - git pull
 gph   - git push
 gd    - git diff
-gds   - git diff --staged
-glog  - git log (oneline, graph)
+glog  - git log (graph)
+ggb   - fuzzy branch switcher
+
+==== Grove / Worktrees ====
+pfs   - open Grove project picker
+wtl   - list worktrees and context
+wta   - create a new worktree branch
+wts   - start worktree services
+wtr   - restart current worktree session
+wtx   - stop worktree services
+wtp   - promote worktree changes back to branch
+wtcl  - clean worktree compose state
+wtpj  - run worktree helpers for a named project
 
 ==== AI / Gemini ====
 ai      - run gemini CLI
@@ -155,6 +206,13 @@ aip     - run gemini CLI in prompt mode
 gai     - generate AI commit message for staged changes
 gge     - explain git diff/commit (arg: ref or HEAD)
 explain - explain a command using Gemini (arg: command or last one)
+
+==== Secrets ====
+vset    - store local config blobs in 1Password or Bitwarden
+
+==== Bluetooth & Audio ====
+bt        - toggle bluetooth device connection (fzf)
+audio     - switch audio input/output source (fzf)
 
 ==== Kubernetes ====
 k       - kubectl (alias)
@@ -166,13 +224,33 @@ kke     - explain kube resource/error (arg: context or last cmd)
 ==== Reference ====
 v       - edit current command line in nvim (in vicmd mode)
 vimhelp - search vim motions cheatsheet
+
+==== Neovim AI (Gemini/OpenAI) ====
+Ctrl-g c - Gemini: New chat (vsplit)
+Ctrl-g t - Gemini: Toggle chat
+Ctrl-g r - Gemini: Rewrite selection (v-mode)
+Ctrl-o c - OpenAI: New chat (vsplit)
+Ctrl-o t - OpenAI: Toggle chat
+Ctrl-o r - OpenAI: Rewrite selection (v-mode)
 EOF
+)
+  local local_content=""
+  [[ -f ~/.cheatsheet.local ]] && local_content=$(cat ~/.cheatsheet.local)
+
+  local selected=$(printf "%s\n%s" "$base_content" "$local_content" | fzf --height=100% --header "Terminal Cheatsheet" --reverse)
+  if [[ -n "$selected" ]]; then
+    local cmd=$(echo "$selected" | awk '{print $1}')
+    if [[ "$cmd" != "===="* ]]; then
+      print -z "$cmd"
+    fi
+  fi
 }
+
 
 # Vim Motion Quick Reference (searchable via fzf)
 unalias vimhelp 2>/dev/null
 vimhelp() {
-  cat << 'EOF' | fzf --header "Vim Motion Quick Reference" --reverse
+  local selected=$(cat << 'EOF' | fzf --height=100% --header "Vim Motion Quick Reference" --reverse
 w - next word | b - back word | e - end of word
 0 - start of line | $ - end of line | ^ - first non-blank
 f{char} - jump forward to char | t{char} - jump until char
@@ -184,6 +262,11 @@ ci" - change inside quotes | ca" - change around quotes
 ci( - change inside parens | ca( - change around parens
 G - bottom of file | gg - top of file | {line}G - go to line
 EOF
+)
+  if [[ -n "$selected" ]]; then
+    local motion=$(echo "$selected" | awk '{print $1}')
+    print -z "$motion"
+  fi
 }
 
 if command -v eza >/dev/null 2>&1; then
@@ -198,12 +281,10 @@ fi
 if command -v lazygit >/dev/null 2>&1; then
   alias lg="lazygit"
 fi
-if command -v tmux >/dev/null 2>&1; then
-  start() { ~/.dotfiles/scripts/tmux-session.sh attach "${1:-main}" "$PWD"; }
-  tmx()   { ~/.dotfiles/scripts/tmux-session.sh attach "${1:-main}" "$PWD"; }
-  tmn()   { ~/.dotfiles/scripts/tmux-session.sh new "${1:-$(basename "$PWD")}" "$PWD"; }
-  tml()   { tmux list-sessions; }
-fi
+
+# Bluetooth & Audio helpers (macOS)
+# Functions 'bt' and 'audio' are defined in zsh/lib/audio.zsh
+
 if command -v docker >/dev/null 2>&1; then
   export DOCKER_BUILDKIT=1
   export COMPOSE_DOCKER_CLI_BUILD=1
@@ -213,6 +294,9 @@ if command -v docker >/dev/null 2>&1; then
   alias dcu="docker compose up -d --remove-orphans"
   alias dcd="docker compose down --remove-orphans"
 fi
+
+# Varlock Secret Helper
+alias vset="~/.dotfiles/scripts/vset.sh"
 
 alias g="git"
 alias gs="git status"
@@ -233,7 +317,7 @@ alias gd="git diff"
 alias gds="git diff --staged"
 alias glog="git log --oneline --graph --decorate --all"
 
-##### Node.js / nvm (lazy-loaded; only for interactive shells)
+##### Node.js / nvm (lazy-loaded)
 if [[ -s "$NVM_DIR/nvm.sh" ]]; then
   _nvm_load() {
     # If the real nvm is already in the path, it should already be handled.
@@ -251,175 +335,30 @@ if [[ -s "$NVM_DIR/nvm.sh" ]]; then
   corepack() { _nvm_load; corepack "$@" }
 fi
 
-##### Python / pyenv
-# PYENV_ROOT and PATH shims are already set in .zshenv.
-# Only run init if we are interactive and want the full CLI integration.
-if command -v pyenv >/dev/null 2>&1; then
-  # Use --no-rehash for fast, non-blocking startup.
-  # Use PYENV_DISABLE_AUTO_REHASH=1 (set in .zshenv) to prevent locks.
-  eval "$(pyenv init --no-rehash - zsh)"
-fi
-
-##### Kubernetes (Kube-Wow ☸️)
-if command -v kubectl >/dev/null 2>&1; then
-  alias k="kubectl"
-  
-  # Interactive Context Switcher (requires fzf)
-  kkx() {
-    local ctx
-    ctx=$(kubectl config get-contexts -o name | fzf --header "Switch Kube Context" --reverse)
-    [[ -n "$ctx" ]] && kubectl config use-context "$ctx"
-  }
-  
-  # Interactive Namespace Switcher (requires fzf)
-  kkn() {
-    local ns
-    ns=$(kubectl get namespaces -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' | fzf --header "Switch Kube Namespace" --reverse)
-    [[ -n "$ns" ]] && kubectl config set-context --current --namespace="$ns"
-  }
-  
-  # Smart Logs - Fuzzy select pod and tail logs
-  kkl() {
-    local pod
-    pod=$(kubectl get pods --no-headers -o custom-columns=":metadata.name" | fzf --header "Tail Pod Logs" --reverse)
-    [[ -n "$pod" ]] && kubectl logs -f "$pod"
-  }
-  
-  # AI Kube Explainer
-  kke() {
-    local cmd="${1:-$(fc -ln -1)}"
-    echo "✨ Asking Gemini to explain K8s resource/event: $cmd"
-    gemini -c "Explain this Kubernetes command, resource, or error in simple terms: $cmd"
-  }
-fi
-
-##### Gemini CLI & AI Features (Wow Factor 🌟)
-if command -v gemini >/dev/null 2>&1; then
-  alias ai="gemini"
-  alias aip="gemini -p"
-  
-  # AI Command Explainer
-  # Use Gemini to explain the last command or a specific command.
-  explain() {
-    local cmd="${1:-$(fc -ln -1)}"
-    echo "✨ Asking Gemini to explain: $cmd"
-    gemini -c "Explain what this terminal command does in simple terms: $cmd"
-  }
-  
-  # AI Commit Message Generator
-  # Uses Gemini to read staged changes and write a beautiful conventional commit.
-  gai() {
-    if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-      echo "Not in a git repository."
-      return 1
-    fi
-    
-    local staged
-    staged="$(git diff --staged)"
-    if [[ -z "$staged" ]]; then
-      echo "No staged changes found. Use 'git add' first."
-      return 1
-    fi
-    
-    echo "✨ Asking Gemini to analyze changes..."
-    local prompt="Analyze the following git diff and write a concise, conventional commit message. Return ONLY the commit message text, with no markdown formatting or extra explanation:\n\n${staged}"
-    local msg
-    msg="$(gemini -c "$prompt" 2>/dev/null)"
-    
-    if [[ -n "$msg" ]]; then
-      echo "\nProposed Commit Message:"
-      echo "\033[0;32m$msg\033[0m\n"
-      echo -n "Commit with this message? [Y/n] "
-      read -q "REPLY"
-      echo
-      if [[ $REPLY =~ ^[Yy]$ || -z $REPLY ]]; then
-        git commit -m "$msg"
-      else
-        echo "Aborted."
-      fi
-    else
-      echo "❌ Failed to generate commit message."
-    fi
-  }
-
-  # AI Git Explainer
-  # Use Gemini to explain what a specific branch or commit actually does.
-  gge() {
-    if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-      echo "Not in a git repository."
-      return 1
-    fi
-    
-    local ref="${1:-HEAD}"
-    echo "✨ Asking Gemini to explain $ref..."
-    local diff
-    diff="$(git show "$ref" 2>/dev/null || git diff "$ref" 2>/dev/null)"
-    
-    if [[ -z "$diff" ]]; then
-      echo "Could not find any changes for $ref."
-      return 1
-    fi
-    
-    gemini -c "Explain what these code changes do in plain English, focusing on the functional impact: \n\n${diff}"
-  }
-fi
-
-# Fuzzy Branch Switcher
-ggb() {
-  if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    echo "Not in a git repository."
-    return 1
-  fi
-  
-  local branch
-  branch=$(git branch --all | grep -v 'HEAD' | sed 's/..//' | fzf --header "Switch Git Branch" --reverse)
-  
-  if [[ -n "$branch" ]]; then
-    # Strip remotes/origin/ for switching if needed
-    local clean_branch="${branch#remotes/origin/}"
-    git checkout "$clean_branch"
-  fi
-}
-
-# Fuzzy Project/Session Switcher
-pfs() {
-  ~/.dotfiles/scripts/project-fzf.sh
-}
-
-# Git Worktree Manager
-alias wt="~/.dotfiles/scripts/git-wt.sh"
-alias ww="wt switch" # Extra fast switcher
-
-##### Terminal Greeting (only for new login shells)
+##### Terminal Greeting
 if [[ -o login ]]; then
   if command -v fastfetch >/dev/null 2>&1; then
     fastfetch
   elif command -v eza >/dev/null 2>&1; then
-    # Fallback to a nice colored directory listing
+    # Fallback to a directory listing
     eza -lah --git --group-directories-first --icons --no-user --no-time -TL 1
   fi
 fi
 
 
-##### Scaleway CLI autocomplete
-command -v scw >/dev/null 2>&1 && eval "$(scw autocomplete script shell=zsh)"
 
-##### Machine-local config (not tracked — put KUBECONFIG, work secrets, etc. here)
+##### Machine-local config
 [[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
 
 ##### Editor
 export EDITOR="nvim"
 export VISUAL="nvim"
 
-##### Better defaults for tools
+##### Tool defaults
 export BAT_THEME="Catppuccin Mocha"
 export EZA_COLORS="uu=36:gu=37:sn=32:sb=32:da=34:ur=34:uw=35:ux=36:ue=36:gr=34:gw=35:gx=36:tr=34:tw=35:tx=36:"
-[[ -f "$HOME/.local/bin/env" ]] && . "$HOME/.local/bin/env"
 
-export PATH="$HOME/.cartesia/bin:$PATH"
-export PATH="/opt/homebrew/opt/postgresql@15/bin:$PATH"
-
-##### Zsh syntax highlighting & Vi Mode (load at the very end for ZLE wrapping)
+##### Zsh syntax highlighting & Vi Mode
 typeset -gA ZSH_HIGHLIGHT_STYLES
 ZSH_HIGHLIGHT_STYLES[command]="fg=#89b4fa,bold"
 ZSH_HIGHLIGHT_STYLES[builtin]="fg=#cba6f7"
@@ -430,3 +369,5 @@ if (( $+functions[zinit] )); then
   zinit light zsh-users/zsh-syntax-highlighting
   zinit light jeffreytse/zsh-vi-mode
 fi
+
+
