@@ -1,55 +1,53 @@
-# Smart PATH discovery
-# This file handles machine-independent PATH logic.
+# Deterministic PATH setup.
+# Order matters; duplicates do not.
 
-typeset -U path PATH
+typeset -U path
 
-path_prepend() {
+path_add() {
   local dir="$1"
-  if [[ -d "$dir" ]]; then
-    path=("$dir" $path)
-  fi
+  [[ -n "$dir" && -d "$dir" ]] || return 0
+  path=("$dir" "${path[@]}")
 }
 
-# 1. Homebrew discovery
-if [[ -z "$HOMEBREW_PREFIX" ]]; then
-  if [[ -x "/opt/homebrew/bin/brew" ]]; then
-    eval "$(/opt/homebrew/bin/brew shellenv)"
-  elif [[ -x "/usr/local/bin/brew" ]]; then
-    eval "$(/usr/local/bin/brew shellenv)"
-  fi
+# Start from the current shell PATH, then normalize it.
+path=("${(@s/:/)PATH}")
+
+# Homebrew first so native packages win over system binaries.
+if [[ -x /opt/homebrew/bin/brew ]]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+elif [[ -x /usr/local/bin/brew ]]; then
+  eval "$(/usr/local/bin/brew shellenv)"
 fi
 
-# 2. Native user tooling
-path_prepend "$HOME/.local/bin"
-path_prepend "$HOME/.local/share/nvim/mason/bin"
-path_prepend "$HOME/bin"
-path_prepend "$HOME/.cargo/bin"
-path_prepend "$HOME/.go/bin"
+path=("${(@s/:/)PATH}")
 
-# 3. NVM / Node
+# User tooling.
+path_add "$HOME/.local/bin"
+path_add "$HOME/.local/share/nvim/mason/bin"
+path_add "$HOME/bin"
+path_add "$HOME/.cargo/bin"
+path_add "$HOME/.go/bin"
+
+# Node via nvm.
 export NVM_DIR="$HOME/.nvm"
 if [[ -d "$NVM_DIR/versions/node" ]]; then
-  local_node_bin=""
+  node_bin=""
   if [[ -r "$NVM_DIR/alias/default" ]]; then
-    local_node_version="$(<"$NVM_DIR/alias/default")"
-    if [[ -d "$NVM_DIR/versions/node/$local_node_version/bin" ]]; then
-      local_node_bin="$NVM_DIR/versions/node/$local_node_version/bin"
+    node_version="$(<"$NVM_DIR/alias/default")"
+    if [[ -d "$NVM_DIR/versions/node/$node_version/bin" ]]; then
+      node_bin="$NVM_DIR/versions/node/$node_version/bin"
     fi
   fi
-
-  if [[ -z "$local_node_bin" ]]; then
-    local_node_bin="$(command ls -1dt "$NVM_DIR"/versions/node/*/bin 2>/dev/null | head -n 1)"
+  if [[ -z "$node_bin" ]]; then
+    node_bin="$(command ls -1dt "$NVM_DIR"/versions/node/*/bin 2>/dev/null | head -n 1)"
   fi
-
-  if [[ -n "$local_node_bin" ]]; then
-    path_prepend "$local_node_bin"
-  fi
+  path_add "$node_bin"
 fi
 
-# 4. Pyenv
+# Pyenv.
 export PYENV_ROOT="$HOME/.pyenv"
 export PYENV_DISABLE_AUTO_REHASH=1
-if [[ -d "$PYENV_ROOT" ]]; then
-  path_prepend "$PYENV_ROOT/shims"
-  path_prepend "$PYENV_ROOT/bin"
-fi
+path_add "$PYENV_ROOT/shims"
+path_add "$PYENV_ROOT/bin"
+
+export PATH="${(j/:/)path}"
