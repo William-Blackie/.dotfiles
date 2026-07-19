@@ -296,34 +296,6 @@ return {
           return
         end
 
-        -- Get repository URL
-        snacks.input.input({
-          prompt = "Repository URL: ",
-        }, function(repo_url)
-          if not repo_url or repo_url == "" then
-            return
-          end
-
-          -- Ask if this is a fork
-          snacks.picker.select({ "No", "Yes" }, {
-            prompt = "Is this a fork?",
-          }, function(is_fork)
-            local upstream_url = nil
-            if is_fork == "Yes" then
-              snacks.input.input({
-                prompt = "Upstream URL: ",
-              }, function(upstream)
-                if upstream and upstream ~= "" then
-                  upstream_url = upstream
-                end
-                proceed_with_init(repo_url, upstream_url)
-              end)
-            else
-              proceed_with_init(repo_url, upstream_url)
-            end
-          end)
-        end)
-
         local function proceed_with_init(repo_url, upstream_url)
           local Notify = vim.notify
 
@@ -368,9 +340,14 @@ return {
 
           -- Step 6: Determine main branch name (main or master)
           local main_branch = "main"
-          local branch_check =
-            vim.fn.system("git branch -r | grep -E 'origin/(main|master)' | head -1")
-          if branch_check:match("master") then
+          local refs = vim.fn.systemlist({
+            "git",
+            "for-each-ref",
+            "--format=%(refname:short)",
+            "refs/remotes/origin/main",
+            "refs/remotes/origin/master",
+          })
+          if vim.tbl_contains(refs, "origin/master") then
             main_branch = "master"
           end
 
@@ -408,11 +385,39 @@ return {
             prompt = "Switch to main worktree?",
           }, function(choice)
             if choice == "Yes" then
-              vim.cmd("cd " .. main_branch)
+              vim.cmd("cd " .. vim.fn.fnameescape(main_branch))
               vim.cmd("e .")
             end
           end)
         end
+
+        -- Get repository URL
+        snacks.input.input({
+          prompt = "Repository URL: ",
+        }, function(repo_url)
+          if not repo_url or repo_url == "" then
+            return
+          end
+
+          -- Ask if this is a fork
+          snacks.picker.select({ "No", "Yes" }, {
+            prompt = "Is this a fork?",
+          }, function(is_fork)
+            local upstream_url = nil
+            if is_fork == "Yes" then
+              snacks.input.input({
+                prompt = "Upstream URL: ",
+              }, function(upstream)
+                if upstream and upstream ~= "" then
+                  upstream_url = upstream
+                end
+                proceed_with_init(repo_url, upstream_url)
+              end)
+            else
+              proceed_with_init(repo_url, upstream_url)
+            end
+          end)
+        end)
       end,
       desc = "Initialize bare repository project",
     },

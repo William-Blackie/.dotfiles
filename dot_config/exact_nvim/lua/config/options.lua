@@ -8,8 +8,8 @@ vim.opt.textwidth = 80
 local nvim_env = vim.fn.stdpath("data") .. "/env"
 local python_host = nvim_env .. "/python/.venv/bin/python"
 local python_bin = nvim_env .. "/python/.venv/bin"
-local node_bin = nvim_env .. "/node/bin"
-local node_host = nvim_env .. "/node/bin/neovim-node-host"
+local node_bin = nvim_env .. "/node/bin:" .. nvim_env .. "/node/node_modules/.bin"
+local node_host = nvim_env .. "/node/node_modules/.bin/neovim-node-host"
 local ruby_host = nvim_env .. "/ruby/bin/neovim-ruby-host"
 local ruby_bin = "/opt/homebrew/opt/ruby/bin"
 local ruby_gems = nvim_env .. "/ruby/gems"
@@ -21,7 +21,7 @@ if vim.fn.executable(python_host) == 1 then
   vim.env.PATH = python_bin .. ":" .. vim.env.PATH
 end
 
-if vim.fn.executable(node_bin .. "/node") == 1 then
+if vim.fn.executable(nvim_env .. "/node/bin/node") == 1 then
   vim.env.PATH = node_bin .. ":" .. vim.env.PATH
 end
 
@@ -64,6 +64,7 @@ vim.opt.scrolloff = 8
 vim.opt.sidescrolloff = 8
 vim.opt.wrap = false
 vim.opt.cursorline = true
+vim.opt.shortmess:append("A")
 
 -- Better diffs
 vim.opt.diffopt:append("algorithm:histogram")

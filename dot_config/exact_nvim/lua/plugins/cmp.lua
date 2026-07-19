@@ -11,6 +11,7 @@ return {
     "Kaiser-Yang/blink-cmp-git",
     "ribru17/blink-cmp-spell",
   },
+  version = "v1.*",
   opts = {
     keymap = { preset = "default" },
     completion = {
@@ -35,12 +36,11 @@ return {
         javascriptreact = { inherit_defaults = true, "css_vars", "npm" },
         typescript = { inherit_defaults = true, "css_vars", "npm" },
         typescriptreact = { inherit_defaults = true, "css_vars", "npm" },
-        cmd = { "path", "buffer" },
       },
       providers = {
         css_vars = {
           name = "css-vars",
-          module = "css-vars.blink",
+          module = "config.sources.css_vars",
           opts = {
             -- WARNING: The search is not optimized to look for variables in JS files.
             -- If you change the search_extensions you might get false positives and weird completion results.

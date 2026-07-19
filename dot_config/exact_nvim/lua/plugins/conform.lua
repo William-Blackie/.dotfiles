@@ -4,13 +4,13 @@ return {
   "stevearc/conform.nvim",
   dependencies = { "mason.nvim" },
   opts = {
-    log_level = vim.log.levels.DEBUG,
+    log_level = vim.log.levels.WARN,
     formatters_by_ft = {
       lua = { "stylua" },
       html = { "prettier" },
       htmldjango = { "djlint" },
-      css = { "prettier" },
-      scss = { "prettier" },
+      css = { "prettier", "stylelint" },
+      scss = { "prettier", "stylelint" },
       yaml = { "prettier" },
       json = { "prettier" },
       jsonc = { "prettier" },
@@ -39,6 +39,9 @@ return {
     },
     ---@type table<string, conform.FormatterConfigOverride|fun(bufnr: integer): nil|conform.FormatterConfigOverride>
     formatters = {
+      docformatter = {
+        exit_codes = { 0, 1, 3 },
+      },
       shfmt_zsh = {
         command = "shfmt",
         args = { "-ln", "zsh", "-i", "2" },

@@ -3,7 +3,7 @@ set -euo pipefail
 
 PYTHON_VERSION="3.12"
 NODE_MAJOR="24"
-PNPM_VERSION="11.1.2"
+PNPM_VERSION="11.13.1"
 RUBY_GEM_VERSION="0.10.0"
 PERL_MODULE="Neovim::Ext"
 
@@ -179,7 +179,7 @@ sync_python_env() {
             exit 0
         fi
     ) || return 0
-    
+
     write_stamp python "$stamp_content"
     return 0
 }
@@ -187,7 +187,7 @@ sync_python_env() {
 sync_node_env() {
     [[ -f "${NODE_MANIFEST_DIR}/package.json" && -f "${NODE_MANIFEST_DIR}/pnpm-lock.yaml" ]] || return 0
 
-    local node_major stamp_content
+    local node_major pnpm_version stamp_content
     stamp_content=$(
         printf 'node_major=%s\n' "$NODE_MAJOR"
         printf 'pnpm_version=%s\n' "$PNPM_VERSION"
@@ -198,8 +198,8 @@ sync_node_env() {
             "${NODE_MANIFEST_DIR}/pnpm-workspace.yaml"
     )
 
-    if cache_hit node "${NODE_BIN_DIR}/neovim-node-host" "$stamp_content" &&
-        [[ -x "${NODE_BIN_DIR}/node" && -x "${NODE_BIN_DIR}/ob" ]]; then
+    if cache_hit node "${NODE_ENV_DIR}/node_modules/.bin/neovim-node-host" "$stamp_content" &&
+        [[ -x "${NODE_BIN_DIR}/node" && -x "${NODE_ENV_DIR}/node_modules/.bin/ob" ]]; then
         return 0
     fi
 
@@ -234,16 +234,20 @@ sync_node_env() {
             exit 0
         fi
 
-        if ! has_cmd pnpm; then
-            if ! has_cmd corepack; then
-                echo "Skipping Neovim Node env build: missing required command: pnpm or corepack"
-                exit 0
-            fi
-            corepack prepare "pnpm@${PNPM_VERSION}" --activate >/dev/null 2>&1
-            if [[ $? -ne 0 ]]; then
+        if has_cmd corepack; then
+            if ! corepack prepare "pnpm@${PNPM_VERSION}" --activate >/dev/null 2>&1; then
                 echo "Failed to prepare pnpm via corepack. Skipping Node env build."
                 exit 0
             fi
+        elif has_cmd pnpm; then
+            pnpm_version="$(pnpm --version 2>/dev/null || echo 'unknown')"
+            if [[ "$pnpm_version" != "$PNPM_VERSION" ]]; then
+                echo "Skipping Neovim Node env build: expected pnpm ${PNPM_VERSION}, found ${pnpm_version}."
+                exit 0
+            fi
+        else
+            echo "Skipping Neovim Node env build: missing required command: pnpm or corepack"
+            exit 0
         fi
 
         sync_file "${NODE_MANIFEST_DIR}/package.json" "${NODE_ENV_DIR}/package.json"
@@ -251,16 +255,26 @@ sync_node_env() {
         sync_file "${NODE_MANIFEST_DIR}/pnpm-workspace.yaml" "${NODE_ENV_DIR}/pnpm-workspace.yaml"
 
         echo "Syncing Neovim Node env with pnpm at ${NODE_ENV_DIR}..."
-        pnpm --dir "$NODE_ENV_DIR" install --frozen-lockfile
-        if [[ $? -ne 0 ]]; then
+        if has_cmd corepack; then
+            (
+                cd "$NODE_ENV_DIR" || exit 1
+                corepack pnpm install --frozen-lockfile
+            )
+            install_status=$?
+        else
+            (
+                cd "$NODE_ENV_DIR" || exit 1
+                pnpm install --frozen-lockfile
+            )
+            install_status=$?
+        fi
+        if [[ "$install_status" -ne 0 ]]; then
             echo "pnpm install failed. Skipping Node env build."
             exit 0
         fi
 
         mkdir -p "$NODE_BIN_DIR"
         ln -sfn "$(command -v node)" "${NODE_BIN_DIR}/node"
-        ln -sfn "${NODE_ENV_DIR}/node_modules/neovim/bin/cli.js" "${NODE_BIN_DIR}/neovim-node-host"
-        write_node_bin_wrapper "${NODE_ENV_DIR}/node_modules/obsidian-headless/cli.js" "${NODE_BIN_DIR}/ob" "0.0.8"
         write_stamp node "$stamp_content"
     ) || return 0
     return 0

@@ -142,7 +142,7 @@ return {
     opts = function()
       vim.filetype.add({
         pattern = {
-          [".*%. jsx"] = "javascriptreact",
+          [".*%.jsx"] = "javascriptreact",
           [".*%.tsx"] = "typescriptreact",
           [".*%.gitlab%.ya?ml"] = "yaml.gitlab",
         },

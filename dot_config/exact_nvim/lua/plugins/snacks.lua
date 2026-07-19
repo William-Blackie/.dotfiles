@@ -10,7 +10,7 @@ return {
       input = { enabled = true },
       notifier = { enabled = true },
       statuscolumn = { enabled = true },
-      image = { eabled = true },
+      image = { enabled = true },
       picker = {
         ui_select = true,
         sources = {

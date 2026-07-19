@@ -1,10 +1,17 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
-# TODO: figure out right command
-command -v rust >/dev/null 2>&1 || {
+if command -v rustup >/dev/null 2>&1 || command -v rustc >/dev/null 2>&1; then
     echo "Skipping Rust install, already installed"
     exit 0
-}
+fi
 
 # https://rust-lang.org/learn/get-started/
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+installer="$(mktemp)"
+trap 'rm -f "$installer"' EXIT
+
+curl --proto '=https' --tlsv1.2 --fail --show-error --location \
+    --output "$installer" \
+    https://sh.rustup.rs
+
+sh "$installer" -y --no-modify-path

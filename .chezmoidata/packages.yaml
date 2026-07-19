@@ -3,6 +3,7 @@ packages:
     brews:
       - "bat"
       - "bitwarden-cli"
+      - "bash-completion@2"
       - "blueutil"
       - "chezmoi"
       - "cmake"

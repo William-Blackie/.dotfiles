@@ -79,21 +79,21 @@ local function toggle_diffview(cmd)
 end
 
 -- Show current diff
-vim.keymap.del("n", "<leader>gd") -- Remove default mapping
+pcall(vim.keymap.del, "n", "<leader>gd")
 
 vim.keymap.set("n", "<leader>gd", function()
   toggle_diffview("DiffviewOpen")
 end, { desc = "Diff file" })
 
 -- Show diff to origin
-vim.keymap.del("n", "<leader>gD") -- Remove default mapping
+pcall(vim.keymap.del, "n", "<leader>gD")
 
 vim.keymap.set("n", "<leader>gD", function()
   toggle_diffview("DiffviewOpen main")
 end, { desc = "Diff file (origin)" })
 
 -- Show file history
-vim.keymap.del("n", "<leader>gf") -- Remove default mapping
+pcall(vim.keymap.del, "n", "<leader>gf")
 
 vim.keymap.set("n", "<leader>gf", function()
   toggle_diffview("DiffviewFileHistory %")
