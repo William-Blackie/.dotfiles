@@ -38,7 +38,6 @@ export PYENV_DISABLE_AUTO_REHASH=1
 export PYTHON_HISTORY="$XDG_STATE_HOME/python_history"
 export RIPGREP_CONFIG_PATH="$XDG_CONFIG_HOME/ripgrep/config"
 export SHELL_SESSIONS_DISABLE=1
-# TODO: sort out postgresql paths.
 
 if [[ "$OSTYPE" == darwin* ]]; then
   _op_ssh_sock="$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
@@ -63,9 +62,10 @@ preferred_path=(
 )
 
 if [[ -r "$NVM_DIR/alias/default" ]]; then
-  node_version="$(<"$NVM_DIR/alias/default")"
-  [[ -d "$NVM_DIR/versions/node/$node_version/bin" ]] && preferred_path=("$NVM_DIR/versions/node/$node_version/bin" "${preferred_path[@]}")
+  _node_version="$(<"$NVM_DIR/alias/default")"
+  [[ -d "$NVM_DIR/versions/node/$_node_version/bin" ]] && preferred_path=("$NVM_DIR/versions/node/$_node_version/bin" "${preferred_path[@]}")
 fi
+unset _node_version
 
 path=("${preferred_path[@]}" "${path[@]}")
 export PATH

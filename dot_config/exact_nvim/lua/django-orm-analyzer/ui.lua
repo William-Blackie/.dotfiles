@@ -113,7 +113,8 @@ function M.show_panel(result, query_str)
   vim.bo[buf].filetype = "markdown"
 
   -- 3. Calculate panel dimensions and layout centering
-  local config = require("django-orm-analyzer").config
+  local analyzer = require("django-orm-analyzer") --[[@as DjangoORMAnalyzer]]
+  local config = analyzer.config
   local width = math.floor(vim.o.columns * config.window.width)
   local height = math.floor(vim.o.lines * config.window.height)
   local col = math.floor((vim.o.columns - width) / 2)

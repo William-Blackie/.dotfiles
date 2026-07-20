@@ -1,7 +1,7 @@
 #!/bin/zsh
 
 # Single source of truth for shell environment and PATH.
-[[ -r "$XDG_DATA_HOME/omzsh/env.zsh" ]] && source "$XDG_DATA_HOME/omzsh/env.zsh"
+[[ -r "$ZDOTDIR/env.zsh" ]] && source "$ZDOTDIR/env.zsh"
 
 # Machine-local env for all zsh invocations (not tracked in dotfiles repo).
 [[ -f "$ZDOTDIR/.zshenv.local" ]] && source "$ZDOTDIR/.zshenv.local"

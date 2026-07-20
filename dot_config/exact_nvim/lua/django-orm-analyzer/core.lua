@@ -214,7 +214,8 @@ end
 --- Build the command list for running the parser.
 --- Uses docker exec when a container is configured, otherwise python3.
 local function build_command(plugin_dir, project_root, query_str)
-  local config = require("django-orm-analyzer").config
+  local analyzer = require("django-orm-analyzer") --[[@as DjangoORMAnalyzer]]
+  local config = analyzer.config
   local container = config.docker_container
 
   if container and container ~= "" then
@@ -291,7 +292,8 @@ function M.analyze_query()
     )
     return
   end
-  local config = require("django-orm-analyzer").config
+  local analyzer = require("django-orm-analyzer") --[[@as DjangoORMAnalyzer]]
+  local config = analyzer.config
   local mode = "local"
   if config.docker_container and config.docker_container ~= "" then
     mode = "docker: " .. config.docker_container
@@ -362,7 +364,8 @@ function M.analyze_query()
       end
 
       -- Style virtual text based on complexity warning levels
-      local config = require("django-orm-analyzer").config
+      local analyzer = require("django-orm-analyzer") --[[@as DjangoORMAnalyzer]]
+      local config = analyzer.config
       if config.virtual_text.enabled then
         local vt_text = config.virtual_text.prefix .. "Complexity: " .. result.complexity
         local hl_group = "DjangoORMVirtualTextOpt"

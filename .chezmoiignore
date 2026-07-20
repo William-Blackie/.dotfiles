@@ -7,6 +7,6 @@ README.md
 .prettierignore
 package.json
 pnpm-lock.yaml
-taplo.toml
+tombi.toml
 chezmoi/
 node_modules/

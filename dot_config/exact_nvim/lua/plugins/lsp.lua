@@ -106,7 +106,7 @@ return {
           filetypes = { "python" },
           root_dir = django_root_dir,
         },
-        taplo = {
+        tombi = {
           keys = {
             {
               "K",
@@ -120,7 +120,7 @@ return {
               end,
               mode = "n",
               buffer = 0,
-              desc = "Show hover (taplo)",
+              desc = "Show hover (tombi)",
             },
           },
         },

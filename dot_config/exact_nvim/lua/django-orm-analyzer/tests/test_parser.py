@@ -4,9 +4,8 @@ import os
 import sys
 import tempfile
 import unittest
+from typing import ClassVar
 from unittest.mock import MagicMock, patch
-
-import django
 
 # Adjust path to import from parent directory
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -16,6 +15,13 @@ from django_orm_analyzer import parser as django_parser
 
 class TestParser(unittest.TestCase):
     """Tests for parser utility functions and CLI entrypoint."""
+
+    def setUp(self) -> None:
+        """Isolate environment mutations made by CLI setup code."""
+        env_patch = patch.dict(os.environ, {}, clear=False)
+        env_patch.start()
+        self.addCleanup(env_patch.stop)
+        os.environ.pop("DJANGO_SETTINGS_MODULE", None)
 
     def test_robust_dedent_empty(self) -> None:
         """Test that empty and None inputs return empty string."""
@@ -200,6 +206,9 @@ class TestParser(unittest.TestCase):
     def test_main_non_queryset_error(self) -> None:
         """Test that non-QuerySet eval result returns error JSON."""
         with tempfile.TemporaryDirectory() as temp_dir:
+            mock_conn = MagicMock()
+            mock_conn.settings_dict = {"ENGINE": "sqlite3"}
+
             with (
                 patch(
                     "sys.argv",
@@ -215,7 +224,14 @@ class TestParser(unittest.TestCase):
                 ),
                 patch("django.setup"),
                 patch("django.apps.apps.get_models", return_value=[]),
+                patch("django.apps.apps.get_app_configs", return_value=[]),
+                patch("django.db.connections", {"default": mock_conn}),
+                patch("django.db.transaction.atomic"),
                 patch("builtins.eval", return_value=123),
+                patch(
+                    "django_orm_analyzer.parser._to_queryset",
+                    side_effect=ValueError("not a QuerySet"),
+                ),
                 patch("builtins.print") as mock_print,
             ):
                 django_parser.run_cli()
@@ -277,6 +293,7 @@ class TestParser(unittest.TestCase):
                     "django.apps.apps.get_models",
                     return_value=[mock_model],
                 ),
+                patch("django.apps.apps.get_app_configs", return_value=[]),
                 patch("django.db.connections", {"default": mock_conn}),
                 patch("django.db.transaction.atomic"),
                 patch(
@@ -322,10 +339,11 @@ class TestParser(unittest.TestCase):
             with open(os.path.join(sub_dir, "settings.py"), "w") as f:
                 f.write("# dummy settings")
 
-            os.environ["REDIS_HOST"] = "redis"
-            os.environ["DB_HOST"] = "postgres"
-
             with (
+                patch.dict(
+                    os.environ,
+                    {"REDIS_HOST": "redis", "DB_HOST": "postgres"},
+                ),
                 patch(
                     "sys.argv",
                     ["django_parser.py", temp_dir, "123"],
@@ -335,9 +353,10 @@ class TestParser(unittest.TestCase):
             ):
                 django_parser.run_cli()
 
-            # Host-override translation was removed — env vars are left as-is
-            self.assertEqual(os.environ.get("REDIS_HOST"), "redis")
-            self.assertEqual(os.environ.get("DB_HOST"), "postgres")
+                # Host-override translation was removed; env vars
+                # are left as-is.
+                self.assertEqual(os.environ.get("REDIS_HOST"), "redis")
+                self.assertEqual(os.environ.get("DB_HOST"), "postgres")
 
     def test_setup_environment_can_skip_venv(self) -> None:
         """Test Docker mode can avoid mounted host virtualenv packages."""
@@ -361,15 +380,6 @@ class TestParser(unittest.TestCase):
     def test_main_model_evaluation(self) -> None:
         """Test CLI when eval returns a Model instance."""
         with tempfile.TemporaryDirectory() as temp_dir:
-
-            class MockModel(django.db.models.Model):
-                """A minimal mock Django model for testing."""
-
-                class Meta:
-                    """Meta options for MockModel."""
-
-                    app_label = "test_app"
-
             mock_queryset = MagicMock()
             mock_compiler = MagicMock()
             mock_compiler.as_sql.return_value = (
@@ -378,10 +388,20 @@ class TestParser(unittest.TestCase):
             )
             mock_queryset.query.get_compiler.return_value = mock_compiler
             mock_queryset.db = "default"
-            MockModel.objects = MagicMock()
-            MockModel.objects.filter.return_value = mock_queryset
+
+            mock_manager = MagicMock()
+            mock_manager.filter.return_value = mock_queryset
+
+            class MockModel:
+                """A minimal mock Django model for testing."""
+
+                objects: ClassVar[MagicMock] = mock_manager
+
+                def __init__(self) -> None:
+                    """Initialize the mock model with a primary key."""
+                    self.pk = 1
+
             mock_model_instance = MockModel()
-            mock_model_instance.pk = 1
 
             mock_cursor = MagicMock()
             mock_cursor.fetchall.return_value = [("row",)]
@@ -412,6 +432,8 @@ class TestParser(unittest.TestCase):
                 ),
                 patch("django.setup"),
                 patch("django.apps.apps.get_models", return_value=[]),
+                patch("django.apps.apps.get_app_configs", return_value=[]),
+                patch("django.db.models.Model", MockModel),
                 patch("django.db.connections", {"default": mock_conn}),
                 patch("django.db.transaction.atomic"),
                 patch("django.db.transaction.set_rollback"),

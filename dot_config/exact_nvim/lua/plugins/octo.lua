@@ -1,15 +1,9 @@
----@class OctoConfig
----Configuration for octo.nvim (GitHub integration)
----@field picker string Picker to use
----@field enable_builtin boolean Enable built-in commands
-
 ---@type LazyPluginSpec
 return {
   ---GitHub integration for Neovim
   ---@see https://github.com/pwntester/octo.nvim
   "pwntester/octo.nvim",
   cmd = "Octo",
-  ---@type OctoConfig
   opts = { picker = "snacks", enable_builtin = true },
   keys = {
     { "<leader>o", group = "Octo" },

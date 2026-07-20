@@ -1,44 +1,43 @@
-
 [init]
 	defaultBranch = main
 
 [push]
 	autoSetupRemote = true
 	default = current
-    followTags = true
+	followTags = true
 
 [pull]
-    rebase = true
+	rebase = true
 
 [rebase]
-    autoStash = true
-    autoSquash = true
-    updateRefs = true
-
+	autoStash = true
+	autoSquash = true
+	updateRefs = true
 
 [fetch]
-    prune = true
-    pruneTags = true
+	prune = true
+	pruneTags = true
 
 [branch]
-    sort = -committerdate
+	sort = -committerdate
 
 [tag]
-    sort = version:refname
+	sort = version:refname
 
 [commit]
-    template = ~/.config/git/commit-template.txt
-    verbose = true
+	template = ~/.config/git/commit-template.txt
+	verbose = true
+	gpgsign = true
 
 [diff]
-    algorithm = histogram
-    renames = true
-    mnemonicPrefix = true
-    colorMoved = plain
+	algorithm = histogram
+	renames = true
+	mnemonicPrefix = true
+	colorMoved = plain
 
 [rerere]
-    enabled = true
-    autoupdate = true
+	enabled = true
+	autoupdate = true
 
 [core]
 	editor = nvim
@@ -48,7 +47,7 @@
 	pager = delta
 
 [help]
-    autocorrect = prompt
+	autocorrect = prompt
 
 [alias]
 	# Short commands
@@ -103,7 +102,7 @@
 	# Multi-tab layout: 1) REMOTE only, 2) REMOTE vs LOCAL, 3) 4-way view
 	# Use ':cquit' to exit with an error code of 1 to abort the merge
 	# Use ':wqall' to accept the changes
-    # layout = "@REMOTE + REMOTE,LOCAL + REMOTE,MERGED,LOCAL / BASE"
+	# layout = "@REMOTE + REMOTE,LOCAL + REMOTE,MERGED,LOCAL / BASE"
 
 [interactive]
 	diffFilter = delta --color-only
@@ -115,45 +114,37 @@
 	side-by-side = true
 	hyperlinks = true
 	tabs = 2
-	navigate = true
 
 [user]
-    name = William Blackie
-
-[user]
-  signingkey = ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIONHSxUVGSX1xgPZ+jyicMOJkF45tcdkq2IZCgIMrpc7
+	name = William Blackie
+	signingkey = ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIONHSxUVGSX1xgPZ+jyicMOJkF45tcdkq2IZCgIMrpc7
 
 [gpg]
-  format = ssh
+	format = ssh
 
 [gpg "ssh"]
-  allowedSignersFile = ~/.config/git/allowed_signers
-  program = "/Applications/1Password.app/Contents/MacOS/op-ssh-sign"
-
-[commit]
-  gpgsign = true
-
+	allowedSignersFile = ~/.config/git/allowed_signers
+	program = "/Applications/1Password.app/Contents/MacOS/op-ssh-sign"
 
 [include]
-    path = ~/.config/delta/catppuccin.gitconfig
-    path = ~/.config/git/local.gitconfig
-    path = ~/.config/git/default.gitconfig
+	path = ~/.config/delta/catppuccin.gitconfig
+	path = ~/.config/git/local.gitconfig
+	path = ~/.config/git/default.gitconfig
 
 [includeIf "gitdir:~/Projects/work/"]
-    path = ~/.config/git/work.gitconfig
-
+	path = ~/.config/git/work.gitconfig
 
 [credential]
 	helper =
 	helper = /usr/local/share/gcm-core/git-credential-manager
 
-
 [url "git@github.com:"]
-    insteadOf = https://github.com/
+	insteadOf = https://github.com/
 
 [credential "https://github.com"]
 	helper =
-	helper = !/opt/homebrew/bin/gh auth git-credential
+	helper = "!f() { if command -v gh >/dev/null 2>&1; then gh auth git-credential \"$@\"; elif [ -x /opt/homebrew/bin/gh ]; then /opt/homebrew/bin/gh auth git-credential \"$@\"; elif [ -x /usr/local/bin/gh ]; then /usr/local/bin/gh auth git-credential \"$@\"; else exit 1; fi; }; f"
+
 [credential "https://gist.github.com"]
 	helper =
-	helper = !/opt/homebrew/bin/gh auth git-credential
+	helper = "!f() { if command -v gh >/dev/null 2>&1; then gh auth git-credential \"$@\"; elif [ -x /opt/homebrew/bin/gh ]; then /opt/homebrew/bin/gh auth git-credential \"$@\"; elif [ -x /usr/local/bin/gh ]; then /usr/local/bin/gh auth git-credential \"$@\"; else exit 1; fi; }; f"

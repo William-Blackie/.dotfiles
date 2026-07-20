@@ -1,7 +1,7 @@
 {
   "name": "dotfiles",
   "private": true,
-  "packageManager": "pnpm@11.1.3",
+  "packageManager": "pnpm@11.13.1+sha512.b2fc7683b8a6525414e7d13e1ba28caaddde96bf66ec540bfaeb7e702b81f3e0be4d1f295edf7f9fe0396740a8dce4509c582ddf79891f4543fea32d37645f25",
   "scripts": {
     "check": "make check",
     "format": "make format",
@@ -19,29 +19,29 @@
     "*.{md,json,yml,yaml}": "prettier --write --ignore-unknown --config dot_prettierrc.toml",
     "*.md": "markdownlint-cli2 --config dot_markdownlint.toml",
     "*.toml": [
-      "taplo format --config taplo.toml",
-      "taplo lint --config taplo.toml --no-schema"
+      "tombi format",
+      "tombi lint --error-on-warnings"
     ],
     "*.lua": "stylua --config-path dot_config/exact_nvim/stylua.toml",
     "*.sh": [
       "shfmt -w -i 4 -ci -bn",
       "shellcheck"
     ],
-    "dot_zshenv": [
+    "./dot_zshenv": [
       "shfmt -w -i 4 -ci -bn",
       "shellcheck"
     ],
-    "{dot_config/zsh/dot_zprofile,dot_config/zsh/dot_zshenv,dot_config/zsh/dot_zshrc,dot_config/exact_fzf/fzf.zsh,dot_local/share/omzsh/**/*.zsh}": [
+    "{dot_config/zsh/dot_zprofile,dot_config/zsh/dot_zshenv,dot_config/zsh/dot_zshrc,dot_config/zsh/*.zsh,dot_config/exact_fzf/fzf.zsh}": [
       "shfmt -w -ln zsh -i 2",
       "zsh -n"
     ]
   },
   "devDependencies": {
     "@johnnymorganz/stylua-bin": "^2.5.2",
-    "@taplo/cli": "^0.7.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.5",
     "markdownlint-cli2": "^0.22.1",
-    "prettier": "^3.8.3"
+    "prettier": "^3.8.3",
+    "tombi": "^1.2.4"
   }
 }

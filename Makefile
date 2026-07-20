@@ -3,11 +3,11 @@ SHELL := /bin/bash
 
 PRETTIER_GLOBS := "**/*.{md,json,yml,yaml}"
 MARKDOWN_FILES := $(shell git ls-files '*.md')
-SHELL_FILES := $(shell git ls-files '*.sh' 'dot_zshenv')
+SHELL_FILES := $(shell git ls-files '*.sh' 'dot_zshenv' | while IFS= read -r f; do [ -f "$$f" ] && printf '%s\n' "$$f"; done)
 SHELLCHECK_TEMPLATE_FILES := .chezmoiscripts/run_after_85-build-nvim-env.sh.tmpl .chezmoiscripts/run_onchange_after_90-rebuild-bat-cache.sh.tmpl
-ZSH_FILES := $(shell git ls-files '*.zsh' 'dot_config/zsh/dot_zprofile' 'dot_config/zsh/dot_zshenv' 'dot_config/zsh/dot_zshrc')
-TOML_FILES := $(shell git ls-files '*.toml')
-LUA_FILES := $(shell git ls-files '*.lua')
+ZSH_FILES := $(shell git ls-files '*.zsh' 'dot_config/zsh/dot_zprofile' 'dot_config/zsh/dot_zshenv' 'dot_config/zsh/dot_zshrc' | while IFS= read -r f; do [ -f "$$f" ] && printf '%s\n' "$$f"; done)
+TOML_FILES := $(shell git ls-files '*.toml' | while IFS= read -r f; do [ -f "$$f" ] && printf '%s\n' "$$f"; done)
+LUA_FILES := $(shell git ls-files '*.lua' | while IFS= read -r f; do [ -f "$$f" ] && printf '%s\n' "$$f"; done)
 
 .DEFAULT_GOAL := help
 
@@ -55,15 +55,15 @@ lint-markdown:
 
 .PHONY: format-toml
 format-toml:
-	pnpm exec taplo format --config taplo.toml $(TOML_FILES)
+	pnpm exec tombi format $(TOML_FILES)
 
 .PHONY: format-toml-check
 format-toml-check:
-	pnpm exec taplo format --check --config taplo.toml $(TOML_FILES)
+	pnpm exec tombi format --check $(TOML_FILES)
 
 .PHONY: lint-toml
 lint-toml:
-	pnpm exec taplo lint --config taplo.toml --no-schema $(TOML_FILES)
+	pnpm exec tombi lint --error-on-warnings $(TOML_FILES)
 
 .PHONY: format-shell
 format-shell:

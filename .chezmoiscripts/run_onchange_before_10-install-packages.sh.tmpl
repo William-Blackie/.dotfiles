@@ -6,6 +6,12 @@ set -euo pipefail
 PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$HOME/bin:$PATH"
 export PATH
 
+# Finds a usable Homebrew executable.
+#
+# Outputs:
+#   Writes the brew path to stdout.
+# Returns:
+#   0 if Homebrew is installed and functional; non-zero otherwise.
 brew_cmd() {
   if command -v brew >/dev/null 2>&1; then
     if brew --prefix >/dev/null 2>&1; then
@@ -29,11 +35,16 @@ brew_cmd() {
 
 if ! BREW_BIN="$(brew_cmd)"; then
   echo "Installing Homebrew..."
-  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  installer="$(mktemp)"
+  trap 'rm -f "$installer"' EXIT
+  curl --proto '=https' --tlsv1.2 --fail --show-error --location \
+    --output "$installer" \
+    https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh
+  /bin/bash "$installer"
   BREW_BIN="$(brew_cmd)"
 fi
 
-"$BREW_BIN" bundle --file=/dev/stdin <<'EOF'
+if ! "$BREW_BIN" bundle --file=/dev/stdin <<'EOF'
 {{- range .packages.darwin.brews }}
 brew {{ . | quote }}
 {{- end }}
@@ -41,4 +52,8 @@ brew {{ . | quote }}
 cask {{ . | quote }}, args: { force: true }
 {{- end }}
 EOF
+then
+  echo "Homebrew bundle failed; continuing so the rest of chezmoi can apply." >&2
+  echo "Rerun chezmoi apply after the Homebrew/cask download issue is resolved." >&2
+fi
 {{- end }}

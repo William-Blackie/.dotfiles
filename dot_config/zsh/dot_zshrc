@@ -1,58 +1,211 @@
 #!/bin/zsh
 
-setopt extendedglob
+setopt extendedglob autocd interactivecomments
+setopt appendhistory sharehistory hist_ignore_space hist_ignore_all_dups \
+  hist_save_no_dups hist_ignore_dups hist_find_no_dups
 
 mkdir -p "$XDG_CACHE_HOME/zsh" "$XDG_STATE_HOME/zsh" "$XDG_RUNTIME_DIR/npm"
-
-export ZSH="$XDG_DATA_HOME/omzsh/oh-my-zsh"
-export ZSH_CUSTOM="$XDG_DATA_HOME/omzsh/custom"
-export ZSH_CACHE_DIR="$XDG_CACHE_HOME/omzsh"
-export ZSH_COMPDUMP="$XDG_CACHE_HOME/zsh/zcompdump-${ZSH_VERSION}"
-ZSH_THEME=""
-DISABLE_AUTO_UPDATE=true
-ZSH_DISABLE_COMPFIX=true
 
 HISTSIZE=500000
 SAVEHIST=$HISTSIZE
 HISTFILE="${XDG_STATE_HOME}/zsh/history"
-setopt appendhistory sharehistory hist_ignore_space hist_ignore_all_dups \
-  hist_save_no_dups hist_ignore_dups hist_find_no_dups
 
+export EDITOR="nvim"
+export VISUAL="nvim"
+export BAT_THEME="Catppuccin Mocha"
+export EZA_COLORS="uu=36:gu=37:sn=32:sb=32:da=34:ur=34:uw=35:ux=36:ue=36:gr=34:gw=35:gx=36:tr=34:tw=35:tx=36:"
+export DOCKER_BUILDKIT=1
+export COMPOSE_DOCKER_CLI_BUILD=1
+export DOCKER_CLI_HINTS=false
+export COMPOSE_MENU=false
+
+alias c="clear"
+alias vim="nvim"
+alias vimdiff="nvim -d"
+command -v bat >/dev/null 2>&1 && alias cat="bat -pp"
+command -v lazygit >/dev/null 2>&1 && alias lg="lazygit"
+
+typeset -U fpath FPATH
 [[ -d "${DOCKER_CONFIG}/completions" ]] && fpath=("${DOCKER_CONFIG}/completions" $fpath)
 [[ -d "$ZDOTDIR/functions" ]] && fpath=("$ZDOTDIR/functions" $fpath)
-[[ -d "$ZSH_CUSTOM/plugins/zsh-completions/src" ]] && fpath=("$ZSH_CUSTOM/plugins/zsh-completions/src" $fpath)
+for _site_functions in /opt/homebrew/share/zsh/site-functions /usr/local/share/zsh/site-functions; do
+  [[ -d "$_site_functions" ]] && fpath=("$_site_functions" $fpath)
+done
+unset _site_functions
 
 zstyle ':completion:*' menu select
 zstyle ':completion:*' group-name ''
 zstyle ':completion:*' list-dirs-first true
 zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}' 'r:|[._-]=* r:|=*' 'l:|=* r:|=*'
-zstyle ':completion:*:descriptions' format '%F{blue}%B%d%b%f'
+zstyle ':completion:*:descriptions' format '[%d]'
 zstyle ':completion:*:warnings' format '%F{203}no matches for:%f %d'
 zstyle ':completion:*:corrections' format '%F{yellow}!- %d (errors: %e) -!%f'
 zstyle ':completion:*:messages' format ' %F{purple} -- %d --%f'
 zstyle ':completion:*' use-cache on
 zstyle ':completion:*' cache-path "$XDG_CACHE_HOME/zsh/completions"
-
-# disable sort when completing `git checkout`
 zstyle ':completion:*:git-checkout:*' sort false
-# set descriptions format to enable group support
-# NOTE: don't use escape sequences (like '%F{red}%d%f') here, fzf-tab will ignore them
-zstyle ':completion:*:descriptions' format '[%d]'
-# set list-colors to enable filename colorizing
-zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
-# force zsh not to show completion menu, which allows fzf-tab to capture the unambiguous prefix
-zstyle ':completion:*' menu no
-# preview directory's content with eza when completing cd
-zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always $realpath'
-# custom fzf flags
-# NOTE: fzf-tab does not follow FZF_DEFAULT_OPTS by default
-zstyle ':fzf-tab:*' fzf-flags --color=fg:1,fg+:2 --bind=tab:accept
-# To make fzf-tab follow FZF_DEFAULT_OPTS.
-# NOTE: This may lead to unexpected behavior since some flags break this plugin. See Aloxaf/fzf-tab#455.
-zstyle ':fzf-tab:*' use-fzf-default-opts yes
-# switch group using `<` and `>`
-zstyle ':fzf-tab:*' switch-group '<' '>'
-zstyle ':fzf-tab:*' fzf-command ftb-tmux-popup
+[[ -n "${LS_COLORS:-}" ]] && zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
+
+autoload -Uz compinit edit-command-line up-line-or-beginning-search down-line-or-beginning-search
+compinit -i -d "$XDG_CACHE_HOME/zsh/zcompdump-${ZSH_VERSION}"
+
+bindkey -v
+export KEYTIMEOUT=1
+zle -N edit-command-line
+zle -N up-line-or-beginning-search
+zle -N down-line-or-beginning-search
+bindkey -M vicmd 'v' edit-command-line
+bindkey '^p' up-line-or-beginning-search
+bindkey '^n' down-line-or-beginning-search
+bindkey -M vicmd '^p' up-line-or-beginning-search
+bindkey -M vicmd '^n' down-line-or-beginning-search
+
+if [[ -r "$XDG_CONFIG_HOME/fzf/fzf.zsh" ]] || command -v fzf >/dev/null 2>&1; then
+  if command -v fd >/dev/null 2>&1; then
+    export FZF_DEFAULT_COMMAND="fd --type f --hidden --follow --exclude .git"
+  else
+    export FZF_DEFAULT_COMMAND="find . -path '*/.git' -prune -o -type f -print"
+  fi
+  export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+  export FZF_DEFAULT_OPTS=" \
+--height=40% --layout=reverse --border --info=inline-right \
+--color=bg:#1e1e2e,bg+:#313244,spinner:#f5c2e7,hl:#89b4fa \
+--color=fg:#cdd6f4,header:#94e2d5,info:#bac2de,pointer:#f5e0dc \
+--color=marker:#a6e3a1,fg+:#f5e0dc,prompt:#89b4fa,hl+:#cba6f7,border:#45475a"
+  # fzf --zsh registers zle widgets, so only load it for real terminals.
+  [[ -t 0 && -t 1 && -r "$XDG_CONFIG_HOME/fzf/fzf.zsh" ]] && source "$XDG_CONFIG_HOME/fzf/fzf.zsh"
+fi
+
+# Sources the first readable file from a list.
+#
+# Arguments:
+#   Candidate file paths.
+# Returns:
+#   0 after sourcing a file; non-zero if no candidate is readable.
+_source_first() {
+  local file
+  for file in "$@"; do
+    [[ -r "$file" ]] && source "$file" && return 0
+  done
+  return 1
+}
+
+if command -v pyenv >/dev/null 2>&1; then
+  eval "$(pyenv init - zsh)"
+fi
+
+# Prints the first readable nvm loader script.
+#
+# Globals:
+#   NVM_DIR
+# Outputs:
+#   Writes the loader path to stdout.
+# Returns:
+#   0 if a loader is found; non-zero otherwise.
+_nvm_script() {
+  local file
+  for file in "$NVM_DIR/nvm.sh" /opt/homebrew/opt/nvm/nvm.sh /usr/local/opt/nvm/nvm.sh; do
+    [[ -r "$file" ]] && print -r -- "$file" && return 0
+  done
+  return 1
+}
+
+# Lazy-loads nvm and forwards the original command.
+#
+# Globals:
+#   NVM_DIR
+# Arguments:
+#   Arguments passed to nvm.
+# Outputs:
+#   Writes nvm output to stdout/stderr.
+# Returns:
+#   The loaded nvm command's exit status, or non-zero if nvm.sh is missing.
+nvm() {
+  local script
+  script="$(_nvm_script)" || {
+    print -u2 "nvm: nvm.sh not found"
+    return 1
+  }
+  unfunction nvm
+  source "$script"
+  nvm "$@"
+}
+
+if command -v zoxide >/dev/null 2>&1; then
+  eval "$(zoxide init zsh)"
+fi
+
+if [[ -z "${STARSHIP_SHELL:-}" && "${TERM:-}" != "dumb" ]] && command -v starship >/dev/null 2>&1; then
+  eval "$(starship init zsh)"
+fi
+
+if command -v direnv >/dev/null 2>&1; then
+  eval "$(direnv hook zsh)"
+fi
+
+# Selects and exports the active 1Password account for this shell.
+#
+# Globals:
+#   OP_ACCOUNT
+# Outputs:
+#   Writes the selected account URL to stdout, or dependency errors to stderr.
+# Returns:
+#   0 after selecting an account; non-zero if dependencies are missing or canceled.
+opswitch() {
+  local cmd
+  for cmd in op jq fzf; do
+    command -v "$cmd" >/dev/null 2>&1 || {
+      print -u2 "opswitch: missing required command: $cmd"
+      return 1
+    }
+  done
+
+  local account
+  account=$(op account list --format json 2>/dev/null | jq -r '.[].url' | fzf --header "Select 1Password Account" --reverse)
+  [[ -n "$account" && "$account" != "null" ]] || return 1
+
+  export OP_ACCOUNT="$account"
+  print "Switched to: $account"
+}
+
+# Signs in to 1Password if needed.
+#
+# Outputs:
+#   Writes the sign-in status to stdout.
+# Returns:
+#   0 if already signed in or sign-in succeeds; non-zero if op fails.
+opsignin() {
+  command -v op >/dev/null 2>&1 || return 1
+
+  local account
+  if account=$(op account get --format json 2>/dev/null); then
+    if command -v jq >/dev/null 2>&1; then
+      print "Already signed in to $(jq -r '.url' <<<"$account")"
+    else
+      print "Already signed in"
+    fi
+    return 0
+  fi
+
+  eval "$(op signin)"
+}
+
+# Runs chezmoi with the configured 1Password account, when set.
+#
+# Globals:
+#   CHEZMOI_1PASSWORD_ACCOUNT
+#   OP_ACCOUNT
+# Arguments:
+#   Arguments passed to chezmoi.
+# Outputs:
+#   Writes chezmoi output to stdout/stderr.
+# Returns:
+#   The wrapped chezmoi command's exit status.
+chezmoi() {
+  local op_chezmoi_account="${CHEZMOI_1PASSWORD_ACCOUNT:-}"
+  [[ -n "$op_chezmoi_account" ]] && export OP_ACCOUNT="$op_chezmoi_account"
+  command chezmoi "$@"
+}
 
 typeset -gA ZSH_HIGHLIGHT_STYLES
 ZSH_HIGHLIGHT_STYLES[command]="fg=#89b4fa,bold"
@@ -61,47 +214,26 @@ ZSH_HIGHLIGHT_STYLES[alias]="fg=#f9e2af"
 ZSH_HIGHLIGHT_STYLES[path]="fg=#94e2d5"
 ZSH_HIGHLIGHT_STYLES["unknown-token"]="fg=#f38ba8,bold"
 
-ZVM_VI_INSERT_ESCAPE_BINDKEY=jk
-ZVM_LINE_BEFORE_PROMPT=false
-zstyle ':omz:plugins:nvm' lazy yes
-zstyle ':omz:plugins:nvm' silent-autoload yes
-zstyle ':omz:plugins:eza' dirs-first yes
-zstyle ':omz:plugins:eza' git-status yes
-zstyle ':omz:plugins:eza' icons yes
+_source_first \
+  /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh \
+  /usr/local/share/zsh-autosuggestions/zsh-autosuggestions.zsh \
+  "$XDG_DATA_HOME/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh" >/dev/null 2>&1 || true
 
-plugins=(
-  1password
-  aws
-  chezmoi
-  command-not-found
-  docker
-  docker-compose
-  eza
-  fzf
-  fzf-tab
-  gh
-  git
-  kubectl
-  kubectx
-  macos
-  nvm
-  pyenv
-  sudo
-  william-1password
-  william-core
-  william-local
-  zoxide
-  zsh-autosuggestions
-  zsh-syntax-highlighting
-  zsh-vi-mode
-)
+[[ -f "$ZDOTDIR/.zshrc.local" ]] && source "$ZDOTDIR/.zshrc.local"
+for local_config in "$ZDOTDIR/.zshrc.d"/*.zsh(N); do
+  source "$local_config"
+done
+unset local_config
 
-if [[ -r "$ZSH/oh-my-zsh.sh" ]]; then
-  source "$ZSH/oh-my-zsh.sh"
-else
-  echo "Oh My Zsh is missing at $ZSH. Run: chezmoi apply --refresh-externals"
-fi
+_source_first \
+  /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh \
+  /usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh \
+  "$XDG_DATA_HOME/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" >/dev/null 2>&1 || true
 
-if command -v direnv >/dev/null 2>&1; then
-  eval "$(direnv hook zsh)"
+if [[ -o login ]]; then
+  if command -v fastfetch >/dev/null 2>&1; then
+    fastfetch
+  elif command -v eza >/dev/null 2>&1; then
+    eza -lah --git --group-directories-first --icons --no-user --no-time -TL 1
+  fi
 fi

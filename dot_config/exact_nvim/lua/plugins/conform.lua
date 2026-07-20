@@ -14,7 +14,7 @@ return {
       yaml = { "prettier" },
       json = { "prettier" },
       jsonc = { "prettier" },
-      toml = { "taplo" },
+      toml = { "tombi" },
       go = { "gofumpt" },
       sh = { "shfmt" },
       bash = { "shfmt" },
@@ -30,14 +30,14 @@ return {
       ["yaml.chezmoitmpl"] = { "prettier" },
       ["json.chezmoitmpl"] = { "prettier" },
       ["jsonc.chezmoitmpl"] = { "prettier" },
-      ["toml.chezmoitmpl"] = { "taplo" },
+      ["toml.chezmoitmpl"] = { "tombi" },
       ["css.chezmoitmpl"] = { "prettier" },
       ["html.chezmoitmpl"] = { "prettier" },
       ["gitconfig.chezmoitmpl"] = { "prettier" },
       ["markdown.mdx"] = { "prettier", "markdownlint-cli2", "markdown-toc" },
       ["markdown"] = { "prettier", "markdownlint-cli2", "markdown-toc" },
     },
-    ---@type table<string, conform.FormatterConfigOverride|fun(bufnr: integer): nil|conform.FormatterConfigOverride>
+    ---@type table<string, table|fun(bufnr: integer): table|nil>
     formatters = {
       docformatter = {
         exit_codes = { 0, 1, 3 },
@@ -46,10 +46,6 @@ return {
         command = "shfmt",
         args = { "-ln", "zsh", "-i", "2" },
         stdin = true,
-      },
-      taplo = {
-        command = "taplo",
-        args = { "format", "--option", "align_entries=true", 'indent_string="  "', "-" },
       },
       ["markdown-toc"] = {
         condition = function(_, ctx)

@@ -4,6 +4,14 @@
 palette     = "catppuccin_mocha"
 add_newline = true
 
+# Line 1: Context (Dir, Git, Languages, Infra)
+# Line 2: Action (Character)
+format = """
+$directory$git_branch$git_status$c$golang$nodejs$python$rust$lua$docker_context$kubernetes$cmd_duration
+$character"""
+
+command_timeout = 2000
+
 [palettes.catppuccin_mocha]
 rosewater = "#F5E0DC"
 flamingo  = "#F2CDCD"
@@ -24,21 +32,12 @@ subtext1  = "#BAC2DE"
 surface0  = "#313244"
 base      = "#1E1E2E"
 
-# Line 1: Context (Dir, Git, Languages, Infra)
-# Line 2: Action (Character)
-format = """
-$directory$git_branch$git_status$c$golang$nodejs$python$rust$lua$docker_context$kubernetes$cmd_duration
-$character"""
-
-command_timeout = 2000
-
 [directory]
 style             = "bold fg:blue"
 format            = "[$path]($style) "
 truncation_length = 3
 truncation_symbol = "…/"
 read_only         = " 󰌾"
-
 
 [git_branch]
 symbol            = " "
@@ -75,13 +74,13 @@ style  = "bold green"
 format = "[$symbol($version )]($style)"
 
 [python]
-symbol       = " "
-style        = "bold yellow"
-format       = "[$symbol($version )(\\($virtualenv\\) )]($style)"
-pyenv_prefix = "pyenv "
+symbol            = " "
+style             = "bold yellow"
+format            = "[$symbol($version )(\\($virtualenv\\) )]($style)"
+pyenv_prefix      = "pyenv "
 # Only show Python when relevant files are present (faster detection)
 detect_extensions = ["py", "ipynb", "pyc", "pyo"]
-detect_files = [
+detect_files      = [
   "requirements.txt",
   "pyproject.toml",
   "setup.py",

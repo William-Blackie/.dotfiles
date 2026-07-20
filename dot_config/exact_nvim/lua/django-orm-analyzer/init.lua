@@ -1,16 +1,32 @@
+---@class DjangoORMKeymapConfig
+---@field analyze string|false Keymap for analyzing the current query
+
+---@class DjangoORMVirtualTextConfig
+---@field enabled boolean Whether virtual text is shown after analysis
+---@field prefix string Prefix displayed before virtual text
+
+---@class DjangoORMDiagnosticsConfig
+---@field enabled boolean Whether analysis warnings become diagnostics
+
+---@class DjangoORMWindowConfig
+---@field border string Floating window border style
+---@field width number Floating window width as a screen fraction
+---@field height number Floating window height as a screen fraction
+
 ---@class DjangoORMConfig
 ---@field python_cmd string Path to python interpreter (local mode)
 ---@field docker_container? string Docker container name/id to exec into (overrides local python)
 ---@field docker_project_root? string Project root path inside the container (defaults to local project root)
----@field keymaps table Keymaps for quick analysis
----@field virtual_text table Virtual text options
----@field diagnostics table Diagnostics options
----@field window table Floating window options
+---@field keymaps DjangoORMKeymapConfig Keymaps for quick analysis
+---@field virtual_text DjangoORMVirtualTextConfig Virtual text options
+---@field diagnostics DjangoORMDiagnosticsConfig Diagnostics options
+---@field window DjangoORMWindowConfig Floating window options
 
 ---@class DjangoORMAnalyzer
 ---@field config DjangoORMConfig
 local M = {}
 
+---@type DjangoORMConfig
 M.config = {
   -- Path to python interpreter (local mode, ignored when docker_container is set)
   python_cmd = "python3",

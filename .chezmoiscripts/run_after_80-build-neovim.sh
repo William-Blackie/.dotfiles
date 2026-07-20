@@ -22,11 +22,33 @@ done
 
 mkdir -p "$INSTALL_PREFIX/bin" "$STATE_DIR"
 
-git -C "${REPO_DIR}" fetch --all --force
-git -C "${REPO_DIR}" pull
-git -C "${REPO_DIR}" switch ${BRANCH_NAME}
+# Runs git in the Neovim checkout without reading global git config.
+#
+# Globals:
+#   REPO_DIR
+# Arguments:
+#   Git subcommand and arguments.
+# Outputs:
+#   Writes git output to stdout/stderr.
+# Returns:
+#   The wrapped git command's exit status.
+git_neovim() {
+    GIT_CONFIG_GLOBAL=/dev/null git -C "$REPO_DIR" "$@"
+}
 
-HEAD="$(git -C "$REPO_DIR" rev-parse HEAD)"
+if ! git_neovim fetch origin "$BRANCH_NAME" --force --tags; then
+    echo "Skipping Neovim build: unable to fetch origin/${BRANCH_NAME}"
+    exit 0
+fi
+
+if git_neovim show-ref --verify --quiet "refs/heads/${BRANCH_NAME}"; then
+    git_neovim switch "$BRANCH_NAME"
+else
+    git_neovim switch --track "origin/${BRANCH_NAME}"
+fi
+git_neovim merge --ff-only "origin/${BRANCH_NAME}"
+
+HEAD="$(git_neovim rev-parse HEAD)"
 STAMP_CONTENT=$'repo='"$REPO_DIR"$'\nhead='"$HEAD"$'\nprefix='"$INSTALL_PREFIX"$'\nbuild_type='"$BUILD_TYPE"
 
 if [[ -x "$INSTALL_PREFIX/bin/nvim" && -f "$STAMP_FILE" ]] && [[ "$(cat "$STAMP_FILE")" == "$STAMP_CONTENT" ]]; then
