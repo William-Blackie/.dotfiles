@@ -7,51 +7,162 @@ local function project_root(path)
     or assert(vim.uv.cwd(), "Unable to determine current working directory")
 end
 
-local service_by_site = {
-  admin = "django-admin",
-  api = "django-api",
-  app = "django-app",
-  cms = "django-cms",
-  flock = "django-flock",
-  www = "django-www",
-  xp = "django-xp",
-}
-
 ---@param path string|nil
 ---@return string|nil
 local function site_from_path(path)
   return path and path:match("/sites/([^/]+)/") or nil
 end
 
----@param path string|nil
----@return string
-local function docker_service(path)
-  return os.getenv("NEOTEST_DOCKER_SERVICE")
-    or os.getenv("NVIM_DAP_DOCKER_SERVICE")
-    or service_by_site[site_from_path(path)]
-    or "django-app"
+---@param suffix string
+---@param default string|nil
+---@return string|nil
+local function docker_env(suffix, default)
+  return os.getenv("NVIM_DAP_DOCKER_" .. suffix)
+    or os.getenv("NEOTEST_DOCKER_" .. suffix)
+    or default
 end
 
 local docker_compose = {
-  service = function(_, position)
-    local path = position and (position.path or position.id)
-    return docker_service(path)
-  end,
-  python = os.getenv("NVIM_DAP_DOCKER_PYTHON")
-    or os.getenv("NEOTEST_DOCKER_PYTHON")
-    or "python",
-  platform = os.getenv("NVIM_DAP_DOCKER_PLATFORM") or os.getenv(
-    "NEOTEST_DOCKER_PLATFORM"
-  ) or os.getenv("DOCKER_DEFAULT_PLATFORM") or "linux/amd64",
+  python = docker_env("PYTHON", "python"),
+  platform = docker_env("PLATFORM")
+    or os.getenv("DOCKER_DEFAULT_PLATFORM")
+    or "linux/amd64",
   debug = {
-    host = os.getenv("NVIM_DAP_DOCKER_HOST") or "127.0.0.1",
-    port = tonumber(
-      os.getenv("NVIM_DAP_DOCKER_DEBUG_PORT")
-        or os.getenv("NEOTEST_DOCKER_DEBUG_PORT")
-        or "5678"
-    ),
+    host = docker_env("HOST", "127.0.0.1"),
+    port = tonumber(docker_env("DEBUG_PORT", "5678")),
   },
 }
+
+local compose_files =
+  { "compose.yaml", "compose.yml", "docker-compose.yaml", "docker-compose.yml" }
+
+---@param path string|nil
+---@return string|nil
+local function current_path(path)
+  if path and path ~= "" then
+    return path
+  end
+  local ok, current = pcall(vim.api.nvim_buf_get_name, 0)
+  if ok and current ~= "" then
+    return current
+  end
+  return vim.uv.cwd()
+end
+
+---@param root string
+---@return string|nil
+local function compose_file(root)
+  for _, file in ipairs(compose_files) do
+    local path = root .. "/" .. file
+    if vim.uv.fs_stat(path) then
+      return path
+    end
+  end
+end
+
+---@param root string
+---@return boolean
+local function is_django_docker_root(root)
+  return compose_file(root) ~= nil and vim.uv.fs_stat(root .. "/manage.py") ~= nil
+end
+
+local compose_content_cache = {}
+
+---@param root string
+---@return string|nil
+local function compose_content(root)
+  if compose_content_cache[root] == nil then
+    local file = compose_file(root)
+    local handle = file and io.open(file, "r") or nil
+    compose_content_cache[root] = false
+    if handle then
+      compose_content_cache[root] = handle:read("*a") or false
+      handle:close()
+    end
+  end
+  return compose_content_cache[root] or nil
+end
+
+---@param root string
+---@return string
+local function remote_root(root)
+  local configured = docker_env("REMOTE_ROOT")
+  if configured then
+    return configured
+  end
+
+  local content = compose_content(root)
+  if content and content:find("/www/mabyduck/django", 1, true) then
+    return "/www/mabyduck/django"
+  end
+
+  if root:match("/mabyduck/.+/django$") then
+    return "/www/mabyduck/django"
+  end
+
+  return "/app"
+end
+
+---@param root string
+---@param path string|nil
+---@return string
+local function docker_service(root, path)
+  local override = docker_env("SERVICE")
+  if override then
+    return override
+  end
+
+  local site = site_from_path(path)
+  local content = site and compose_content(root)
+  if content and content:find("\n  django-" .. site .. ":", 1, true) then
+    return "django-" .. site
+  end
+  return "django-app"
+end
+
+---@param root string
+---@return table
+local function path_mappings(root)
+  return {
+    [root] = remote_root(root),
+  }
+end
+
+---@param root string
+---@return string[]
+local function compose_command(root)
+  local command = { "docker", "compose" }
+  local file = compose_file(root)
+  if file then
+    vim.list_extend(command, { "-f", file })
+  end
+  return command
+end
+
+---@param root string
+---@return string|nil
+local function env_file(root)
+  local local_env = root .. "/build/.env"
+  if vim.uv.fs_stat(local_env) then
+    return local_env
+  end
+
+  local mabyduck_env = "/Users/william/Projects/work/mabyduck/main/django/build/.env"
+  if root:match("/mabyduck/.+/django$") and vim.uv.fs_stat(mabyduck_env) then
+    return mabyduck_env
+  end
+end
+
+---@param root string
+---@return table
+local function compose_env(root)
+  local env = { DOCKER_DEFAULT_PLATFORM = docker_compose.platform }
+  local file = env_file(root)
+  if file then
+    env.ENV_FILE = file
+  end
+  return env
+end
 
 ---@param root string
 ---@param position table|string|nil
@@ -65,10 +176,74 @@ local function django_settings_module(root, position)
   end
 
   local site = site_from_path(path)
-  if site and vim.uv.fs_stat(root .. "/sites/" .. site .. "/settings/test.py") then
+  if
+    site
+    and site ~= "common"
+    and vim.uv.fs_stat(root .. "/sites/" .. site .. "/settings/test.py")
+  then
     return "sites." .. site .. ".settings.test"
   end
   return "sites.app.settings.test"
+end
+
+---@param root string
+---@param position table|string|nil
+---@param debug boolean|nil
+---@return string[]
+local function docker_env_args(root, position, debug)
+  local env = {
+    "DJANGO_SETTINGS_MODULE=" .. django_settings_module(root, position),
+    "PYTHONPATH=" .. remote_root(root),
+  }
+  if debug then
+    env[#env + 1] = "NEOTEST_PYTHON_DISABLE_POSTMORTEM=1"
+  end
+
+  local args = {}
+  for _, item in ipairs(env) do
+    vim.list_extend(args, { "-e", item })
+  end
+  return args
+end
+
+---@param root string
+---@param position table|string|nil
+---@param debug boolean|nil
+---@return string[]
+local function docker_exec_command(root, position, debug)
+  local path = type(position) == "table" and (position.path or position.id) or position
+  local command = compose_command(root)
+  vim.list_extend(command, { "exec", "-T", "-w", remote_root(root) })
+  vim.list_extend(command, docker_env_args(root, position or current_path(path), debug))
+  table.insert(command, docker_service(root, path))
+  return command
+end
+
+---@param root string
+---@param position table|string|nil
+---@param debug boolean|nil
+---@return string[]
+local function docker_run_command(root, position, debug)
+  local path = type(position) == "table" and (position.path or position.id) or position
+  local command = compose_command(root)
+  vim.list_extend(command, { "run", "--rm", "--no-deps", "-T", "-w", remote_root(root) })
+  vim.list_extend(command, docker_env_args(root, position or current_path(path), debug))
+  vim.list_extend(
+    command,
+    { "--entrypoint", docker_compose.python, docker_service(root, path) }
+  )
+  return command
+end
+
+---@param root string
+---@param position table|string|nil
+---@return string[]
+local function python_command(root, position)
+  if not is_django_docker_root(root) then
+    return { docker_compose.python }
+  end
+
+  return docker_run_command(root, position or current_path(), false)
 end
 
 ---@return string
@@ -83,37 +258,109 @@ local function debugpy_adapter()
   return "python3"
 end
 
----@param overrides? table
+---@param root string
+---@param position table|string|nil
+---@param name string
 ---@return table
-local function docker_debug_configuration(overrides)
-  return require("neotest-python.docker").debug_configuration(
-    vim.tbl_deep_extend("force", vim.deepcopy(docker_compose), overrides or {})
-  )
+local function docker_attach_configuration(root, position, name)
+  local mappings = {}
+  for local_root, docker_root in pairs(path_mappings(root)) do
+    mappings[#mappings + 1] = {
+      localRoot = local_root,
+      remoteRoot = docker_root,
+    }
+  end
+
+  return {
+    type = "python",
+    name = name,
+    request = "attach",
+    connect = vim.deepcopy(docker_compose.debug),
+    pathMappings = mappings,
+    django = true,
+    justMyCode = false,
+  }
+end
+
+---@param root string
+---@param position table|string|nil
+---@param context table|nil
+local function start_debugpy(root, position, context)
+  local command
+  if context and context.remote_script_path then
+    command = docker_run_command(root, position, true)
+  else
+    command = docker_exec_command(root, position, true)
+    table.insert(command, docker_compose.python)
+  end
+
+  vim.list_extend(command, {
+    "-m",
+    "debugpy",
+    "--listen",
+    "0.0.0.0:" .. docker_compose.debug.port,
+    "--wait-for-client",
+  })
+
+  if context and context.remote_script_path then
+    table.insert(command, context.remote_script_path)
+    vim.list_extend(command, context.script_args or {})
+  else
+    vim.list_extend(command, {
+      "./manage.py",
+      "runserver",
+      "--noreload",
+      "0.0.0.0:" .. docker_env("APP_PORT", "80"),
+    })
+  end
+
+  vim.system(command, { cwd = root, env = compose_env(root) }, function(result)
+    if result.code ~= 0 then
+      vim.schedule(function()
+        vim.notify(result.stderr, vim.log.levels.ERROR)
+      end)
+    end
+  end)
+  vim.wait(800, function()
+    return false
+  end)
+end
+
+---@param config table
+local function run_dap_config(config)
+  local before = config.before
+  config.before = nil
+  if before then
+    before()
+  end
+  require("dap").run(config)
 end
 
 ---@return table
 local function django_debug_configuration()
-  return docker_debug_configuration({
-    name = function(context)
-      return "Django: Docker Compose (" .. context.service .. ")"
-    end,
-    root = project_root,
-    command = {
-      "./manage.py",
-      "runserver",
-      "--noreload",
-      "0.0.0.0:" .. (os.getenv("NVIM_DAP_DOCKER_APP_PORT") or "80"),
-    },
-  })
+  return function()
+    local path = current_path()
+    local root = project_root(path)
+    local service = docker_service(root, path)
+    local config = docker_attach_configuration(
+      root,
+      { path = path },
+      "Django: Docker Compose (" .. service .. ")"
+    )
+    config.before = function()
+      start_debugpy(root, { path = path })
+    end
+    return config
+  end
 end
 
 ---@type table[]
 local plugins = {
   {
     "nvim-neotest/neotest-python",
+    dir = "/Users/william/Projects/neotest-python",
     url = "https://github.com/William-Blackie/neotest-python.git",
     branch = "williamblackie/docker-path-mappings",
-    dev = true,
   },
 
   {
@@ -155,18 +402,53 @@ local plugins = {
     opts = {
       adapters = {
         ["neotest-python"] = {
-          runner = "pytest",
           root = project_root,
-          python = { "python" },
-          docker = docker_compose,
-          args = function(_, position)
+          python = python_command,
+          runner = function(command)
+            for _, arg in ipairs(command) do
+              if arg:match("^DJANGO_SETTINGS_MODULE=") then
+                return "django"
+              end
+            end
+            return require("neotest-python.base").get_runner(command)
+          end,
+          cwd = function(root)
+            return root
+          end,
+          env = function(root)
+            if is_django_docker_root(root) then
+              return compose_env(root)
+            end
+            return {}
+          end,
+          path_mappings = function(root)
+            if is_django_docker_root(root) then
+              return path_mappings(root)
+            end
+            return {}
+          end,
+          args = function(runner, position)
             local path = position and (position.path or position.id)
             local root = path and project_root(path) or vim.uv.cwd()
-            local docker = require("neotest-python.docker")
-            if docker.context(docker_compose, root, position) then
+            if runner == "pytest" and is_django_docker_root(root) then
               return { "--ds=" .. django_settings_module(root, position) }
             end
             return {}
+          end,
+          dap = function(root, position, default_config, context)
+            if not is_django_docker_root(root) then
+              return default_config
+            end
+            return vim.tbl_deep_extend(
+              "force",
+              default_config,
+              docker_attach_configuration(root, position, "Debug Test: Docker Compose"),
+              {
+                before = function()
+                  start_debugpy(root, position, context)
+                end,
+              }
+            )
           end,
         },
       },
@@ -304,7 +586,7 @@ local plugins = {
       {
         "<leader>dD",
         function()
-          require("dap").run(django_debug_configuration()())
+          run_dap_config(django_debug_configuration()())
         end,
         desc = "Debug Django Docker",
       },
@@ -315,25 +597,25 @@ local plugins = {
     "mfussenegger/nvim-dap-python",
     config = function()
       require("dap-python").setup(debugpy_adapter())
-      local docker = require("neotest-python.docker")
-      docker.setup_dap()
 
       local dap = require("dap")
       dap.defaults.python = dap.defaults.python or {}
       dap.defaults.python.exception_breakpoints = {}
-      ---@type table<string, any>
-      local docker_defaults = dap.defaults[docker.adapter_name]
-      docker_defaults.exception_breakpoints = {}
 
       dap.configurations.python = dap.configurations.python or {}
       table.insert(
         dap.configurations.python,
-        docker_debug_configuration({
-          name = "Attach: Docker Compose",
-          root = project_root,
+        setmetatable({ name = "Attach: Docker Compose" }, {
+          __call = function()
+            local path = current_path()
+            return docker_attach_configuration(
+              project_root(path),
+              { path = path },
+              "Attach: Docker Compose"
+            )
+          end,
         })
       )
-      table.insert(dap.configurations.python, django_debug_configuration())
 
       dap.listeners.after.event_initialized["dapui_config"] = function()
         vim.schedule(function()
