@@ -19,11 +19,26 @@ export COMPOSE_DOCKER_CLI_BUILD=1
 export DOCKER_CLI_HINTS=false
 export COMPOSE_MENU=false
 
+# Aliases
+## Editor
 alias c="clear"
 alias vim="nvim"
 alias vimdiff="nvim -d"
 command -v bat >/dev/null 2>&1 && alias cat="bat -pp"
 command -v lazygit >/dev/null 2>&1 && alias lg="lazygit"
+
+## Kubernetes
+command -v kubectl >/dev/null 2>&1 && alias k="kubectl"
+command -v kubectl >/dev/null 2>&1 && alias kgp="kubectl get pods"
+command -v kubectl >/dev/null 2>&1 && alias kgs="kubectl get services"
+command -v kubectl >/dev/null 2>&1 && alias kd="kubectl describe"
+command -v kubectl >/dev/null 2>&1 && alias kdel="kubectl delete"
+command -v kubectl >/dev/null 2>&1 && alias kctx="kubectx"
+command -v kubectl >/dev/null 2>&1 && alias kns="kubens"
+command -v kubectl >/dev/null 2>&1 && alias klogs="kubectl logs -f"
+command -v kubectl >/dev/null 2>&1 && alias kexec="kubectl exec -it"
+command -v kubectl >/dev/null 2>&1 && alias kcp="kubectl cp"
+command -v kubectl >/dev/null 2>&1 && alias ktop="kubectl top pods"
 
 typeset -U fpath FPATH
 [[ -d "${DOCKER_CONFIG}/completions" ]] && fpath=("${DOCKER_CONFIG}/completions" $fpath)
