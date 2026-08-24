@@ -34,11 +34,15 @@ return {
     picker = { name = "fzf-lua" },
     ui = { enable = false },
     workspaces = (function()
+      local utils = require("lib.utils")
       local workspaces = {
-        { name = "notes", path = vim.env.OBSIDIAN_NOTES_PATH or "~/Obsidian" },
+        {
+          name = "notes",
+          path = utils.env_or_default("OBSIDIAN_NOTES_PATH", "~/Obsidian"),
+        },
         {
           name = "personal",
-          path = vim.env.OBSIDIAN_PERSONAL_PATH or "~/Obsidian/Personal",
+          path = utils.env_or_default("OBSIDIAN_PERSONAL_PATH", "~/Obsidian/Personal"),
         },
       }
       -- Add work workspace if configured

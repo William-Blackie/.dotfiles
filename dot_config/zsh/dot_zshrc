@@ -44,6 +44,13 @@ zstyle ':completion:*:messages' format ' %F{purple} -- %d --%f'
 zstyle ':completion:*' use-cache on
 zstyle ':completion:*' cache-path "$XDG_CACHE_HOME/zsh/completions"
 zstyle ':completion:*:git-checkout:*' sort false
+
+# ^Xa to insert all matches
+zle -C all-matches complete-word _generic
+bindkey '^Xa' all-matches
+zstyle ':completion:all-matches:*' old-matches only
+zstyle ':completion:all-matches::::' completer _all_matches
+
 [[ -n "${LS_COLORS:-}" ]] && zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
 
 autoload -Uz compinit edit-command-line up-line-or-beginning-search down-line-or-beginning-search

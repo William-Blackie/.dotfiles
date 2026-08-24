@@ -11,6 +11,9 @@ importers:
       '@mermaid-js/mermaid-cli':
         specifier: ^11.16.0
         version: 11.16.0(puppeteer@25.1.0)(tailwindcss@4.3.1)
+      '@mistweaverco/kulala-fmt':
+        specifier: ^4.5.3
+        version: 4.5.3
       jiti:
         specifier: ^2.7.0
         version: 2.7.0
@@ -119,6 +122,10 @@ packages:
 
   '@mermaid-js/parser@1.2.0':
     resolution: {integrity: sha512-oYPyv8A4As1yH5Bx+04iQEQxXuIQDe0GKCNSRgao6z8AM9jixXIfP0vsppRLvGf+nKIOb9/LdpWA4YuJiVvESA==}
+
+  '@mistweaverco/kulala-fmt@4.5.3':
+    resolution: {integrity: sha512-xKZFCx0MA+Ombs3OZIEcVErcfKqCt+Ao3SrfYrROwN8yxU66whcqFggBc7OSjg9Fpm2OQu3/MZn0z1n/7s1AxA==}
+    hasBin: true
 
   '@msgpack/msgpack@2.8.0':
     resolution: {integrity: sha512-h9u4u/jiIRKbq25PM+zymTyW6bhTzELvOoUd+AvYriWOAKpLGnIamaET3pnHYoI5iYphAHBI4ayx0MehR+VVPQ==}
@@ -1061,6 +1068,8 @@ snapshots:
   '@mermaid-js/parser@1.2.0':
     dependencies:
       '@chevrotain/types': 11.1.2
+
+  '@mistweaverco/kulala-fmt@4.5.3': {}
 
   '@msgpack/msgpack@2.8.0': {}
 

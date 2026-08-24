@@ -5,7 +5,7 @@ return {
   event = "VeryLazy",
   opts = {
     -- startVisible = true,
-    debounceMs = 100,
+    debounceMs = 500,
     -- showBlankVirtLine = true,
     -- highlightFullVirtLine = false,
     -- highlightColor = { link = "Comment" },

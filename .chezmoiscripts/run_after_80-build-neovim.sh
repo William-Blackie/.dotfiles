@@ -36,17 +36,19 @@ git_neovim() {
     GIT_CONFIG_GLOBAL=/dev/null git -C "$REPO_DIR" "$@"
 }
 
-if ! git_neovim fetch origin "$BRANCH_NAME" --force --tags; then
-    echo "Skipping Neovim build: unable to fetch origin/${BRANCH_NAME}"
+if git_neovim fetch origin '+refs/tags/*:refs/tags/*'; then
+    echo "Neovim repository updated successfully."
+else
+    echo "Skipping Neovim build: unable to fetch latest changes from origin"
     exit 0
 fi
+git_neovim merge --ff-only "origin/${BRANCH_NAME}"
 
 if git_neovim show-ref --verify --quiet "refs/heads/${BRANCH_NAME}"; then
     git_neovim switch "$BRANCH_NAME"
 else
     git_neovim switch --track "origin/${BRANCH_NAME}"
 fi
-git_neovim merge --ff-only "origin/${BRANCH_NAME}"
 
 HEAD="$(git_neovim rev-parse HEAD)"
 STAMP_CONTENT=$'repo='"$REPO_DIR"$'\nhead='"$HEAD"$'\nprefix='"$INSTALL_PREFIX"$'\nbuild_type='"$BUILD_TYPE"

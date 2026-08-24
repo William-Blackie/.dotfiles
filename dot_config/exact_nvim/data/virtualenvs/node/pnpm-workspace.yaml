@@ -1,2 +1,3 @@
 allowBuilds:
+  '@mistweaverco/kulala-fmt': true
   puppeteer: true

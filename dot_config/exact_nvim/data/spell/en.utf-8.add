@@ -93,3 +93,6 @@ colorscheme
 SCSS
 mixin
 Blackie
+serializer
+queryset
+POST

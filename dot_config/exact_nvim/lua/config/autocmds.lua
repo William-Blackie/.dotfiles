@@ -1,5 +1,8 @@
 -- Filetype detection
 vim.filetype.add({
+  extension = {
+    rest = "http",
+  },
   filename = {
     ["compose.yaml"] = "yaml.docker-compose",
     ["compose.yml"] = "yaml.docker-compose",
@@ -188,10 +191,8 @@ end, {
 -- Git
 -- Open files changed on this branch
 local function open_git_files(mode)
-  local root = vim.trim(
-    vim.system({ "git", "rev-parse", "--show-toplevel" }, { text = true }):wait().stdout
-  )
-  if root == "" then
+  local root = require("lib.utils").git_root()
+  if not root then
     vim.notify("Not in a git repo", vim.log.levels.ERROR)
     return
   end
@@ -305,3 +306,164 @@ vim.api.nvim_create_autocmd("FileType", {
 vim.api.nvim_create_user_command("Datenow", function()
   vim.api.nvim_put({ vim.fn.strftime("%Y-%m-%d") }, "c", true, true)
 end, { desc = "Insert current ISO date" })
+
+vim.api.nvim_create_user_command("SortPythonDict", function()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local cursor = vim.api.nvim_win_get_cursor(0)
+  local cursor_row = cursor[1] - 1
+  local cursor_col = cursor[2]
+
+  local ok, parser = pcall(vim.treesitter.get_parser, bufnr, "python")
+
+  if not ok or not parser then
+    vim.notify("Python Tree-sitter parser is not installed", vim.log.levels.ERROR)
+    return
+  end
+
+  local trees = parser:parse()
+  local tree = trees and trees[1]
+
+  if not tree then
+    vim.notify("Could not parse this buffer", vim.log.levels.ERROR)
+    return
+  end
+
+  local node =
+    tree:root():named_descendant_for_range(cursor_row, cursor_col, cursor_row, cursor_col)
+
+  while node and node:type() ~= "dictionary" do
+    node = node:parent()
+  end
+
+  if not node then
+    vim.notify("Cursor is not inside a Python dictionary", vim.log.levels.ERROR)
+    return
+  end
+
+  local dict_start_row, _, dict_end_row = node:range()
+  local entries = {}
+
+  for child in node:iter_children() do
+    if child:type() == "pair" then
+      local key_node = child:named_child(0)
+      local pair_start_row, _, pair_end_row = child:range()
+
+      if not key_node then
+        vim.notify("Could not read a dictionary key", vim.log.levels.ERROR)
+        return
+      end
+
+      if pair_start_row == dict_start_row or pair_end_row >= dict_end_row then
+        vim.notify(
+          "Each key and the closing brace must start on separate lines",
+          vim.log.levels.ERROR
+        )
+        return
+      end
+
+      local key = vim.treesitter.get_node_text(key_node, bufnr)
+      local first = key:sub(1, 1)
+      local last = key:sub(-1)
+
+      if (first == "'" or first == '"') and last == first then
+        key = key:sub(2, -2)
+      end
+
+      table.insert(entries, {
+        key = key:lower(),
+        pair_start_row = pair_start_row,
+        pair_end_row = pair_end_row,
+      })
+    end
+  end
+
+  if #entries < 2 then
+    vim.notify("Dictionary has fewer than two entries")
+    return
+  end
+
+  -- Put entries into their current source order.
+  table.sort(entries, function(a, b)
+    return a.pair_start_row < b.pair_start_row
+  end)
+
+  -- Attach comments and blank lines immediately above a key
+  -- to that dictionary entry.
+  for index, entry in ipairs(entries) do
+    local start_row = entry.pair_start_row
+    local minimum_row
+
+    if index == 1 then
+      minimum_row = dict_start_row + 1
+    else
+      minimum_row = entries[index - 1].pair_end_row + 1
+    end
+
+    while start_row > minimum_row do
+      local previous_line = vim.api.nvim_buf_get_lines(
+        bufnr,
+        start_row - 1,
+        start_row,
+        false
+      )[1] or ""
+
+      local is_comment = previous_line:match("^%s*#") ~= nil
+      local is_blank = previous_line:match("^%s*$") ~= nil
+
+      if not is_comment and not is_blank then
+        break
+      end
+
+      start_row = start_row - 1
+    end
+
+    entry.start_row = start_row
+    entry.original_index = index
+  end
+
+  -- Capture each complete entry block.
+  for index, entry in ipairs(entries) do
+    local end_row
+
+    if entries[index + 1] then
+      end_row = entries[index + 1].start_row
+    else
+      end_row = dict_end_row
+    end
+
+    entry.lines = vim.api.nvim_buf_get_lines(bufnr, entry.start_row, end_row, false)
+  end
+
+  local replacement_start = entries[1].start_row
+
+  -- Stable, case-insensitive key sort.
+  table.sort(entries, function(a, b)
+    if a.key == b.key then
+      return a.original_index < b.original_index
+    end
+
+    return a.key < b.key
+  end)
+
+  local replacement = {}
+
+  for _, entry in ipairs(entries) do
+    vim.list_extend(replacement, entry.lines)
+  end
+
+  vim.api.nvim_buf_set_lines(bufnr, replacement_start, dict_end_row, false, replacement)
+
+  vim.notify("Python dictionary sorted by key")
+end, {
+  desc = "Sort Python dictionary under cursor by key",
+  force = true,
+})
+
+-- dadbod fix: https://github.com/neovim/neovim/issues/26977
+vim.api.nvim_create_autocmd("Filetype", {
+  pattern = "sql",
+  callback = function()
+    vim.keymap.del("i", "<left>", { buffer = true })
+    vim.keymap.del("i", "<right>", { buffer = true })
+  end,
+})

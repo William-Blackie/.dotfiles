@@ -2,23 +2,40 @@
 ---@type LazyPluginSpec
 return {
   "saghen/blink.cmp",
+  -- Pin to a tagged release so lazy.nvim always lands on a git tag: the fuzzy
+  -- matcher then downloads a prebuilt binary from GitHub releases instead of
+  -- falling back to `cargo build --release` (which fails here - ~/.cargo is
+  -- owned by root, see the cargo permission note).
+  version = "v1.*",
   dependencies = {
     "saghen/blink.compat",
     "rafamadriz/friendly-snippets",
-    "jdrupal-dev/css-vars.nvim",
     "alexandre-abrioux/blink-cmp-npm.nvim",
     "disrupted/blink-cmp-conventional-commits",
+    "Jezda1337/nvim-html-css",
     "Kaiser-Yang/blink-cmp-git",
     "ribru17/blink-cmp-spell",
+    "moyiz/blink-emoji.nvim",
+    {
+      "jdrupal-dev/css-vars.nvim",
+    },
+    {
+      "ph1losof/ecolog.nvim",
+      branch = "v1",
+      opts = {
+        integrations = {
+          nvim_cmp = false,
+          blink_cmp = true,
+        },
+      },
+    },
   },
-  version = "v1.*",
   opts = {
     keymap = { preset = "default" },
     completion = {
       documentation = {
-        auto_show = true,
-        auto_show_delay_ms = 100,
-        update_delay_ms = 100,
+        auto_show_delay_ms = 500,
+        update_delay_ms = 500,
         window = {
           max_width = math.min(80, vim.o.columns),
           border = "rounded",
@@ -30,7 +47,9 @@ return {
     -- elsewhere in your config, without redefining it, due to `opts_extend`
     sources = {
       per_filetype = {
-        gitcommit = { inherit_defaults = true, "git", "conventional_commits" },
+        default = { "lsp", "path", "snippets", "buffer", "ecolog" },
+        gitcommit = { inherit_defaults = true, "git", "conventional_commits", "emoji" },
+        markdown = { inherit_defaults = true, "emoji" },
         css = { inherit_defaults = true, "css_vars" },
         javascript = { inherit_defaults = true, "css_vars", "npm" },
         javascriptreact = { inherit_defaults = true, "css_vars", "npm" },
@@ -38,9 +57,33 @@ return {
         typescriptreact = { inherit_defaults = true, "css_vars", "npm" },
       },
       providers = {
+        ecolog = {
+          name = "ecolog",
+          module = "ecolog.integrations.cmp.blink_cmp",
+        },
+        emoji = {
+          name = "Emoji",
+          module = "blink-emoji",
+          score_offset = 15,
+          opts = {
+            insert = true,
+            trigger = function()
+              return { ":" }
+            end,
+          },
+          should_show_items = function()
+            return vim.tbl_contains({ "gitcommit", "markdown" }, vim.o.filetype)
+          end,
+        },
         css_vars = {
           name = "css-vars",
+          -- css-vars.nvim's own blink integration (css-vars.blink) requires
+          -- "blink.lib.task", which doesn't exist in current blink.cmp
+          -- (moved under "blink.cmp.lib.*") - it's broken upstream as of
+          -- their HEAD too, not just our pinned version. Use our own
+          -- self-contained source module instead.
           module = "config.sources.css_vars",
+
           opts = {
             -- WARNING: The search is not optimized to look for variables in JS files.
             -- If you change the search_extensions you might get false positives and weird completion results.

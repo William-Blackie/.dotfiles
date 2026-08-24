@@ -26,7 +26,20 @@ vim.filetype.add({
   },
 })
 
+-- There is no dedicated "htmldjango" treesitter grammar. Without this, every
+-- treesitter-dependent feature on htmldjango buffers (highlighting, and
+-- notably html-css's `K` hover / definition lookups, which walk the
+-- treesitter tree to find `class`/`id` attributes) silently gets no parser
+-- and falls straight through to plain LSP hover.
+vim.treesitter.language.register("html", "htmldjango")
+
 return {
+  {
+    "nvim-treesitter/nvim-treesitter",
+    opts = function(_, opts)
+      opts.ensure_installed = vim.list_extend(opts.ensure_installed or {}, { "html" })
+    end,
+  },
   {
     "mason-org/mason.nvim",
     opts = {

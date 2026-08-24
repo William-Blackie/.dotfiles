@@ -3,19 +3,10 @@
 ---@field linters_by_ft table<string, string[]> Linters mapped to filetypes
 ---@field linters table<string, table> Custom linter configurations
 
-local python_root_markers = {
-  "pyproject.toml",
-  "ruff.toml",
-  ".ruff.toml",
-  "setup.py",
-  "setup.cfg",
-  "requirements.txt",
-  "manage.py",
-  ".git",
-}
+local utils = require("lib.utils")
 
 local function python_root()
-  return vim.fs.root(0, python_root_markers) or vim.fn.getcwd()
+  return vim.fs.root(0, utils.python_root_markers) or vim.fn.getcwd()
 end
 
 local function project_executable(root, exe)

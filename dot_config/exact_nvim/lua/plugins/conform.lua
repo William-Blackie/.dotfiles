@@ -15,6 +15,8 @@ return {
       json = { "prettier" },
       jsonc = { "prettier" },
       toml = { "tombi" },
+      http = { "kulala-fmt" },
+      rest = { "kulala-fmt" },
       go = { "gofumpt" },
       sh = { "shfmt" },
       bash = { "shfmt" },

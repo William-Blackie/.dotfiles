@@ -42,6 +42,27 @@ Edit files in `~/.dotfiles`, then apply. If a tool writes useful config back
 into `$HOME`, copy or add it back into `~/.dotfiles` so the repo stays the
 source of truth.
 
+## Keyboard And Windowing
+
+The ZSA Voyager layout is managed in Keymapp/Oryx, not in these dotfiles. Keep
+the keyboard firmware aligned with this modifier contract:
+
+- `Ctrl-h/j/k/l` navigates Neovim splits and tmux panes.
+- `Alt-h/j/k/l` navigates AeroSpace windows.
+- `Alt-Shift-h/j/k/l` moves AeroSpace windows.
+- tmux uses `C-Space` as the primary prefix, with `C-b` kept as a fallback.
+
+The proposed Oryx layout is documented in
+[`docs/zsa-voyager-oryx-layout.md`](docs/zsa-voyager-oryx-layout.md).
+
+Useful reload commands:
+
+```sh
+chezmoi apply
+aerospace reload-config
+tmux source-file ~/.config/tmux/tmux.conf
+```
+
 ## 1Password And SSH
 
 SSH is wired to the 1Password SSH agent through `private_dot_ssh/config.tmpl`.

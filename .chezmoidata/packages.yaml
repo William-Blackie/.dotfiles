@@ -43,6 +43,7 @@ packages:
     casks:
       - "1password"
       - "1password-cli"
+      - "nikitabobko/tap/aerospace"
       - "bitwarden"
       - "chatgpt"
       - "firefox"

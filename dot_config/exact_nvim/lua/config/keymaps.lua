@@ -6,6 +6,22 @@ vim.keymap.set("i", "<C-l>", "<Right>", { desc = "Move right" })
 vim.keymap.set("i", "<C-j>", "<Down>", { desc = "Move down" })
 vim.keymap.set("i", "<C-k>", "<Up>", { desc = "Move up" })
 
+local function navigate_window_or_tmux(key, tmux_direction)
+  return function()
+    local current_window = vim.api.nvim_get_current_win()
+    vim.cmd("wincmd " .. key)
+
+    if current_window == vim.api.nvim_get_current_win() and vim.env.TMUX then
+      vim.system({ "tmux", "select-pane", "-" .. tmux_direction }, { detach = true })
+    end
+  end
+end
+
+vim.keymap.set("n", "<C-h>", navigate_window_or_tmux("h", "L"), { desc = "Window left" })
+vim.keymap.set("n", "<C-j>", navigate_window_or_tmux("j", "D"), { desc = "Window down" })
+vim.keymap.set("n", "<C-k>", navigate_window_or_tmux("k", "U"), { desc = "Window up" })
+vim.keymap.set("n", "<C-l>", navigate_window_or_tmux("l", "R"), { desc = "Window right" })
+
 -- Search and replace word under cursor
 vim.keymap.set("n", "gsw", ":%s/<C-r><C-w>/", { desc = "Replace word (global)" })
 vim.keymap.set({ "n", "v" }, "gsW", function()
